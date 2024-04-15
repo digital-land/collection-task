@@ -1,11 +1,16 @@
 # deduce the repository
+ifeq ($(COLLECTION_NAME),)
+$(error COLLECTION_NAME is not set)
+endif
+
 ifeq ($(REPOSITORY),)
-REPOSITORY=$(shell basename -s .git `git config --get remote.origin.url`)
+REPOSITORY=$(COLLECTION_NAME)-collection
 endif
 
 ifeq ($(ENVIRONMENT),)
-ENVIRONMENT=production
+ENVIRONMENT=local
 endif
+
 
 ifeq ($(SOURCE_URL),)
 SOURCE_URL=https://raw.githubusercontent.com/digital-land/
@@ -13,10 +18,6 @@ endif
 
 ifeq ($(CONFIG_URL),)
 CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/main/
-endif
-
-ifeq ($(COLLECTION_NAME),)
-COLLECTION_NAME=$(shell echo "$(REPOSITORY)"|sed 's/-collection$$//')
 endif
 
 ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
@@ -62,7 +63,7 @@ LANG := C.UTF-8
 LC_COLLATE := C.UTF-8
 
 # current git branch
-BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+# BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 
 UNAME := $(shell uname)
 

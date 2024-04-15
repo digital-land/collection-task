@@ -1,0 +1,12 @@
+services:
+  task:
+    build: .
+    environment:
+      COLLECTION_NAME: ancient-woodland 
+    volumes:
+        # add back in if youw ant to view the pipeline files being used
+        # - "${PWD}/pipeline:/task/pipeline"
+        - "${PWD}/task/collection:/task/collection"
+        - "${PWD}/task/dataset:/task/dataset"
+        - "${PWD}/task/transformed:/task/transformed"
+        - "${PWD}/task/var:/task/var"
