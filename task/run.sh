@@ -5,12 +5,9 @@ set -e
 TODAY=$(date +%Y-%m-%d)
 echo "Running collector for $COLLECTION_NAME on $TODAY"
 
-# shouldn't b. hardcoded into this file
-# export AWS_ENDPOINT_URL=http://localhost:4566
-
-
-# echo Update makerules
-# make makerules
+if [ -z "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo "assign value to COLLECTION_DATASET_BUCKET_NAME to save to a bucket" 
+fi
 
 echo Install dependencies
 make init
@@ -18,32 +15,38 @@ make init
 echo Run the collector
 make collect
 
-
-# echo Save resources to prod S3
-# make save-resources
-
-# echo Save logs to prod S3
-# make save-logs
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
+    make save-resources
+    make save-logs
+else
+    echo "no"
+fi
 
 echo Build the collection database
 make collection
 
-# echo Push collection database to Prod S3
-# make save-collection
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo Push collection database to Prod S3
+    make save-collection
+fi
 
 echo Transform collected files
 make transformed -j 2
 
-# echo Save transformed files to Prod S3
-# make save-transformed
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo Save transformed files to Prod S3
+    make save-transformed
+fi
 
 echo Build datasets from the transformed files
 make dataset
 
-# echo Save datasets and expecations to Prod S3
-# aws_credentials_prod
-# make save-dataset
-# make save-expectations
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo Save datasets and expecations to Prod S3
+    make save-dataset
+    make save-expectations
+fi
 
 # TODO: send notifications of errors
 

@@ -2,4 +2,6 @@
 /task/pipeline
 /task/datasets
 /task/transformed
+/task/flattened
 /task/var
+/task/.venv

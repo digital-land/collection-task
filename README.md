@@ -23,3 +23,7 @@ make compose-down
 to remove the container and the images you created.
 
 You can edit the collection by changing the environment variable in the docker compose file.
+
+### Without Docker
+
+There is a way to run the process without docker you will need to set up the 
