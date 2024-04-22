@@ -47,7 +47,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-dataset
     make save-expectations
 fi
-
+   
 # TODO: send notifications of errors
 
 # if [ -d /data ]; then

@@ -19,6 +19,11 @@ services:
     build: .
     environment:
       COLLECTION_NAME: ancient-woodland 
+      COLLECTION_DATASET_BUCKET_NAME: local-collection-data
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: dummyaccess
+      AWS_SECRET_ACCESS_KEY: dummysecret
+      AWS_DEFAULT_REGION: us-east-1
     volumes:
         # add back in if youw ant to view the pipeline files being used
         # - "${PWD}/pipeline:/task/pipeline"
@@ -27,12 +32,12 @@ services:
         - "${PWD}/task/transformed:/task/transformed"
         - "${PWD}/task/var:/task/var"
         - "${PWD}/task/flattened:/task/flattened"
+    depends_on:
+        - aws-cli
   
   aws-cli:
       image: mesosphere/aws-cli
       container_name: "aws-cli"
-      volumes:
-        - ./landing:/tmp/landing:ro
       environment:
         - AWS_ACCESS_KEY_ID=dummyaccess
         - AWS_SECRET_ACCESS_KEY=dummysecret
@@ -47,7 +52,7 @@ services:
           done;     
           echo Connected!;
       
-          aws s3api create-bucket --bucket local- --endpoint-url http://localstack:4566
+          aws s3api create-bucket --bucket local-collection-data --endpoint-url http://localstack:4566
         "
       depends_on:
         - localstack
