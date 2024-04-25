@@ -16,7 +16,7 @@ echo Run the collector
 make collect
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
+    echo Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME
     make save-resources
     make save-logs
 else
@@ -27,7 +27,7 @@ echo Build the collection database
 make collection
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo Push collection database to Prod S3
+    echo Push collection database to $COLLECTION_DATASET_BUCKET_NAME
     make save-collection
 fi
 
@@ -35,7 +35,7 @@ echo Transform collected files
 make transformed -j 2
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo Save transformed files to Prod S3
+    echo Save transformed files to $COLLECTION_DATASET_BUCKET_NAME
     make save-transformed
 fi
 
@@ -43,7 +43,7 @@ echo Build datasets from the transformed files
 make dataset
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo Save datasets and expecations to Prod S3
+    echo Save datasets and expecations to $COLLECTION_DATASET_BUCKET_NAME
     make save-dataset
     make save-expectations
 fi
