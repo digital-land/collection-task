@@ -1,11 +1,16 @@
 # deduce the repository
+ifeq ($(COLLECTION_NAME),)
+$(error COLLECTION_NAME is not set)
+endif
+
 ifeq ($(REPOSITORY),)
-REPOSITORY=$(shell basename -s .git `git config --get remote.origin.url`)
+REPOSITORY=$(COLLECTION_NAME)-collection
 endif
 
 ifeq ($(ENVIRONMENT),)
-ENVIRONMENT=production
+ENVIRONMENT=local
 endif
+
 
 ifeq ($(SOURCE_URL),)
 SOURCE_URL=https://raw.githubusercontent.com/digital-land/
@@ -15,18 +20,16 @@ ifeq ($(CONFIG_URL),)
 CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/main/
 endif
 
-ifeq ($(COLLECTION_NAME),)
-COLLECTION_NAME=$(shell echo "$(REPOSITORY)"|sed 's/-collection$$//')
-endif
+# ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
+# COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset
+# endif
 
-ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
-COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset
-endif
+# is this needed needed? The answer is realistically no just a different sync command is used.
+# ifeq ($(HOISTED_COLLECTION_DATASET_BUCKET_NAME),)
+# HOISTED_COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset-hoisted
+# endif
 
-ifeq ($(HOISTED_COLLECTION_DATASET_BUCKET_NAME),)
-HOISTED_COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset-hoisted
-endif
-
+# is this used anywhere?
 define dataset_url
 'https://$(COLLECTION_DATASET_BUCKET_NAME).s3.eu-west-2.amazonaws.com/$(2)-collection/dataset/$(1).sqlite3'
 endef
@@ -62,7 +65,7 @@ LANG := C.UTF-8
 LC_COLLATE := C.UTF-8
 
 # current git branch
-BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+# BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 
 UNAME := $(shell uname)
 

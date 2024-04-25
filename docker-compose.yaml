@@ -1,0 +1,58 @@
+services:
+
+  localstack:
+    image: localstack/localstack:3.1
+    container_name: "localstack"
+    ports:
+      - "127.0.0.1:4566:4566"
+      - "127.0.0.1:4510-4559:4510-4559"
+    environment:
+      DEBUG: ${DEBUG:-0}
+      AWS_DEFAULT_REGION: eu-west-2
+      SERVICES: sqs, s3
+    # volumes:
+    #   - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+    #   - "/var/run/docker.sock:/var/run/docker.sock"
+    #   - "./localstack_bootstrap:/etc/localstack/init/ready.d/"
+
+  task:
+    build: .
+    environment:
+      COLLECTION_NAME: ancient-woodland 
+      COLLECTION_DATASET_BUCKET_NAME: local-collection-data
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: dummyaccess
+      AWS_SECRET_ACCESS_KEY: dummysecret
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+        # add back in if youw ant to view the pipeline files being used
+        # - "${PWD}/pipeline:/task/pipeline"
+        - "${PWD}/task/collection:/task/collection"
+        - "${PWD}/task/dataset:/task/dataset"
+        - "${PWD}/task/transformed:/task/transformed"
+        - "${PWD}/task/var:/task/var"
+        - "${PWD}/task/flattened:/task/flattened"
+    depends_on:
+        - aws-cli
+  
+  aws-cli:
+      image: mesosphere/aws-cli
+      container_name: "aws-cli"
+      environment:
+        - AWS_ACCESS_KEY_ID=dummyaccess
+        - AWS_SECRET_ACCESS_KEY=dummysecret
+        - AWS_DEFAULT_REGION=us-east-1
+      entrypoint: /bin/sh -c
+      command: >
+        "
+          echo Waiting for localstack service start...;
+          while ! nc -z localstack 4566;
+          do
+            sleep 1;
+          done;     
+          echo Connected!;
+      
+          aws s3api create-bucket --bucket local-collection-data --endpoint-url http://localstack:4566
+        "
+      depends_on:
+        - localstack
