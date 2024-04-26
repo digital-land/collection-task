@@ -1,6 +1,6 @@
 # collection-workflow
 
-Repository to run the nightly process for a given collection. Produces a docker container which can be used by cloud services to run for any given collection.
+Repository to run the nightly process for a given collection. Produces a docker container which can be used by cloud services to run for any given collection via environment variables. The docker compose shows how to use the image locally.
 
 ## Running Locally
 
@@ -26,4 +26,29 @@ You can edit the collection by changing the environment variable in the docker c
 
 ### Without Docker
 
-There is a way to run the process without docker you will need to set up the 
+There is a way to run the process without docker you will need to set up some dependencies:
+- install GNU make
+- set up a virtual environment with python (3.8 or 3.9)
+
+Once the above is done move into the task directory
+```
+cd task
+```
+
+set the  name of the collection you want to process to an Environment variables
+```
+export COLLECTION_NAME=ancient-woodland
+```
+
+From here you can either use the make rules to run run the collector (and/or different stages) e.g.
+
+```
+make init
+make -j 10
+```
+
+or run the bash script that's used in the docker image. (if you haven't added a COLLECTION_DATASET_BUCKET_NAME then it will just skip the AWS steps)
+
+```
+./run.sh
+```
