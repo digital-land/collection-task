@@ -5,3 +5,7 @@
 /task/var
 /task/flattened
 /task/.venv
+/task/expectations
+/task/metadata.json
+/task/specification
+/task/issue

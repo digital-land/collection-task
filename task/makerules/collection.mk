@@ -92,4 +92,4 @@ collection/%.csv:
 config:: $(COLLECTION_CONFIG_FILES)
 
 clean::
-	rm -f $(COLLECTION_CONFIG_FILES)
+	rm -rf $(COLLECTION_DIR)

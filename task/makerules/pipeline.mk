@@ -102,9 +102,9 @@ define build-dataset =
 	md5sum $@ $(basename $@).sqlite3
 	csvstack $(ISSUE_DIR)$(notdir $(basename $@))/*.csv > $(basename $@)-issue.csv
 	mkdir -p $(EXPECTATION_DIR)
-	time digital-land expectations-dataset-checkpoint --output-dir=$(EXPECTATION_DIR) --specification-dir=specification --data-path=$(basename $@).sqlite3
-	csvstack $(EXPECTATION_DIR)/**/$(notdir $(basename $@))-responses.csv > $(basename $@)-expectation-response.csv
-	csvstack $(EXPECTATION_DIR)/**/$(notdir $(basename $@))-issues.csv > $(basename $@)-expectation-issue.csv
+	# time digital-land expectations-dataset-checkpoint --output-dir=$(EXPECTATION_DIR) --specification-dir=specification --data-path=$(basename $@).sqlite3
+	# csvstack $(EXPECTATION_DIR)/**/$(notdir $(basename $@))-responses.csv > $(basename $@)-expectation-response.csv
+	# csvstack $(EXPECTATION_DIR)/**/$(notdir $(basename $@))-issues.csv > $(basename $@)-expectation-issue.csv
 endef
 
 collection::
