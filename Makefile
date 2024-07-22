@@ -13,5 +13,5 @@ clobber::
 	rm -rf ./task/collection ./task/pipeline ./task/dataset ./task/transformed ./task/var
 
 build-image::
-	docker build -t collection-workflow:latest .
+	docker build -t collection-task:latest .
  

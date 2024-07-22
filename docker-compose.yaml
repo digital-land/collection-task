@@ -18,7 +18,7 @@ services:
   task:
     build: .
     environment:
-      COLLECTION_NAME: ancient-woodland 
+      COLLECTION_NAME: ancient-woodland
       COLLECTION_DATASET_BUCKET_NAME: local-collection-data
       AWS_ENDPOINT_URL: http://localstack:4566
       AWS_ACCESS_KEY_ID: dummyaccess
@@ -34,7 +34,7 @@ services:
         - "${PWD}/task/flattened:/task/flattened"
     depends_on:
         - aws-cli
-  
+
   aws-cli:
       image: mesosphere/aws-cli
       container_name: "aws-cli"
@@ -49,9 +49,9 @@ services:
           while ! nc -z localstack 4566;
           do
             sleep 1;
-          done;     
+          done;
           echo Connected!;
-      
+
           aws s3api create-bucket --bucket local-collection-data --endpoint-url http://localstack:4566
         "
       depends_on:

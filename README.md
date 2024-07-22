@@ -1,4 +1,4 @@
-# collection-workflow
+# collection-task
 
 Repository to run the nightly process for a given collection. Produces a docker container which can be used by cloud services to run for any given collection via environment variables. The docker compose shows how to use the image locally.
 
