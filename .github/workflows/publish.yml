@@ -34,7 +34,7 @@ jobs:
         environment: ${{ fromJSON(needs.detect-environments.outputs.environments) }}
     environment: ${{ matrix.environment }}
     env:
-      DOCKER_REPO: ${{ secrets.DEPLOY_DOCKER_REPOSITORY_REQUEST_API }}
+      DOCKER_REPO: ${{ secrets.DEPLOY_DOCKER_REPOSITORY_COLLECTION_TASK }}
     steps:
       - uses: actions/checkout@v4
 
