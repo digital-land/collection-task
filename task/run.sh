@@ -20,7 +20,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-resources
     make save-logs
 else
-    echo "no"
+    echo "No COLECTION_DATASET_BUCKET_NAME defined so collection fies not pushed to s3"
 fi
 
 echo Build the collection database
@@ -37,6 +37,8 @@ make transformed -j 2
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save transformed files to Prod S3
     make save-transformed
+else
+    echo "No COLECTION_DATASET_BUCKET_NAME defined so transformed fies not pushed to s3"
 fi
 
 echo Build datasets from the transformed files
@@ -46,6 +48,8 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save datasets and expecations to Prod S3
     make save-dataset
     make save-expectations
+else
+    echo "No COLECTION_DATASET_BUCKET_NAME defined so dataset and expectation fies not pushed to s3"
 fi
    
 # TODO: send notifications of errors
