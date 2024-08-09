@@ -32,7 +32,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 fi
 
 echo Transform collected files
-make transformed -j 2
+make transformed -j 8
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save transformed files to Prod S3
@@ -42,7 +42,7 @@ else
 fi
 
 echo Build datasets from the transformed files
-make dataset
+make dataset -j 4
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save datasets and expecations to Prod S3
