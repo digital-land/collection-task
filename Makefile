@@ -15,3 +15,14 @@ clobber::
 build-image::
 	docker build -t collection-task:latest .
  
+ make run::
+	cd task; \
+	./run.sh;
+
+make clean::
+	cd task; \
+	make clean;
+
+make clobber::
+	cd task; \
+	make clobber;

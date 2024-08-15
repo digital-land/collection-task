@@ -52,3 +52,16 @@ or run the bash script that's used in the docker image. (if you haven't added a 
 ```
 ./run.sh
 ```
+
+Equally make rules havebeen set up in the root of the repository which allow you to run  the ./run.sh without changing to the task folder. e.g.
+
+```
+make run COLLECTION_NAME=<insert_collection_name_here>
+```
+
+you can include other environment variables to control the task
+
+```
+make run COLLECTION_NAME=<insert_collection_name_here> TRANSFORMED_JOBS=8
+```
+make clean and make clobber have also been set up to clear the task folder
