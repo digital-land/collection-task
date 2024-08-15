@@ -9,3 +9,6 @@
 /task/metadata.json
 /task/specification
 /task/issue
+
+# python
+.venv

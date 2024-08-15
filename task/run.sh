@@ -9,6 +9,14 @@ if [ -z "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "assign value to COLLECTION_DATASET_BUCKET_NAME to save to a bucket" 
 fi
 
+if [ -z "$TRANSFORMED_JOBS" ]; then
+    TRANSFORMED_JOBS=8
+fi
+
+if [ -z "$DATASET_JOBS" ]; then
+    DATASET_JOBS=8
+fi
+
 echo Install dependencies
 make init
 
@@ -20,7 +28,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-resources
     make save-logs
 else
-    echo "No COLECTION_DATASET_BUCKET_NAME defined so collection fies not pushed to s3"
+    echo "No COLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
 fi
 
 echo Build the collection database
@@ -32,24 +40,24 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 fi
 
 echo Transform collected files
-make transformed -j 8
+gmake transformed -j $TRANSFORMED_JOBS
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save transformed files to Prod S3
     make save-transformed
 else
-    echo "No COLECTION_DATASET_BUCKET_NAME defined so transformed fies not pushed to s3"
+    echo "No COLECTION_DATASET_BUCKET_NAME defined so transformed files not pushed to s3"
 fi
 
 echo Build datasets from the transformed files
-make dataset -j 4
+gmake dataset -j $DATASET_JOBS
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save datasets and expecations to Prod S3
     make save-dataset
     make save-expectations
 else
-    echo "No COLECTION_DATASET_BUCKET_NAME defined so dataset and expectation fies not pushed to s3"
+    echo "No COLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
 fi
    
 # TODO: send notifications of errors
