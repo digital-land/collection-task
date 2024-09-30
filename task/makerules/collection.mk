@@ -43,8 +43,15 @@ COLLECTION_INDEX=\
 	$(COLLECTION_DIR)/resource.csv
 
 init::
-	curl -qfsL '$(DATASTORE_URL)$(REPOSITORY)/$(COLLECTION_DIR)log.csv' > $(COLLECTION_DIR)log.csv
-	curl -qfsL '$(DATASTORE_URL)$(REPOSITORY)/$(COLLECTION_DIR)resource.csv' > $(COLLECTION_DIR)resource.csv
+	$(eval LOG_STATUS_CODE := $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(DATASTORE_URL)$(REPOSITORY)/$(COLLECTION_DIR)log.csv'))
+	$(eval RESOURCE_STATUS_CODE = $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(DATASTORE_URL)$(REPOSITORY)/$(COLLECTION_DIR)resource.csv'))
+	@if [ $(LOG_STATUS_CODE) -ne 403 ] && [ $(RESOURCE_STATUS_CODE) -ne 403 ]; then \
+		echo 'Downloading log.csv and resource.csv'; \
+		curl -qfsL '$(DATASTORE_URL)$(REPOSITORY)/$(COLLECTION_DIR)log.csv' > $(COLLECTION_DIR)log.csv; \
+		curl -qfsL '$(DATASTORE_URL)$(REPOSITORY)/$(COLLECTION_DIR)resource.csv' > $(COLLECTION_DIR)resource.csv; \
+	else \
+		echo 'Unable to locate log.csv and resource.csv' ;\
+	fi
 
 first-pass:: collect
 
@@ -52,16 +59,20 @@ second-pass:: collection
 
 collect:: $(COLLECTION_CONFIG_FILES)
 	@mkdir -p $(RESOURCE_DIR)
-	digital-land collect $(ENDPOINT_CSV)
+	digital-land ${DIGITAL_LAND_OPTS} collect $(ENDPOINT_CSV) --collection-dir $(COLLECTION_DIR)
 
 collection::
-	digital-land collection-save-csv
+	digital-land ${DIGITAL_LAND_OPTS} collection-save-csv --collection-dir $(COLLECTION_DIR)
 
 clobber-today::
 	rm -rf $(LOG_FILES_TODAY) $(COLLECTION_INDEX)
 
 makerules::
 	curl -qfsL '$(SOURCE_URL)/makerules/main/collection.mk' > makerules/collection.mk
+
+commit-collection::
+	git add collection/log
+	git diff --quiet && git diff --staged --quiet || (git commit -m "Collection $(shell date +%F)"; git push origin $(BRANCH))
 
 load-resources::
 	aws s3 sync s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/$(RESOURCE_DIR) $(RESOURCE_DIR) --no-progress
@@ -92,4 +103,4 @@ collection/%.csv:
 config:: $(COLLECTION_CONFIG_FILES)
 
 clean::
-	rm -rf $(COLLECTION_DIR)
+	rm -f $(COLLECTION_CONFIG_FILES)

@@ -1,16 +1,11 @@
 # deduce the repository
-ifeq ($(COLLECTION_NAME),)
-$(error COLLECTION_NAME is not set)
-endif
-
 ifeq ($(REPOSITORY),)
-REPOSITORY=$(COLLECTION_NAME)-collection
+REPOSITORY=$(shell basename -s .git `git config --get remote.origin.url`)
 endif
 
 ifeq ($(ENVIRONMENT),)
-ENVIRONMENT=local
+ENVIRONMENT=production
 endif
-
 
 ifeq ($(SOURCE_URL),)
 SOURCE_URL=https://raw.githubusercontent.com/digital-land/
@@ -20,16 +15,18 @@ ifeq ($(CONFIG_URL),)
 CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/main/
 endif
 
-# ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
-# COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset
-# endif
+ifeq ($(COLLECTION_NAME),)
+COLLECTION_NAME=$(shell echo "$(REPOSITORY)"|sed 's/-collection$$//')
+endif
 
-# is this needed needed? The answer is realistically no just a different sync command is used.
-# ifeq ($(HOISTED_COLLECTION_DATASET_BUCKET_NAME),)
-# HOISTED_COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset-hoisted
-# endif
+ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
+COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset
+endif
 
-# is this used anywhere?
+ifeq ($(HOISTED_COLLECTION_DATASET_BUCKET_NAME),)
+HOISTED_COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset-hoisted
+endif
+
 define dataset_url
 'https://$(COLLECTION_DATASET_BUCKET_NAME).s3.eu-west-2.amazonaws.com/$(2)-collection/dataset/$(1).sqlite3'
 endef
@@ -46,6 +43,7 @@ endif
 	init\
 	first-pass\
 	second-pass\
+	third-pass\
 	clobber\
 	clean\
 	commit-makerules\
@@ -65,7 +63,7 @@ LANG := C.UTF-8
 LC_COLLATE := C.UTF-8
 
 # current git branch
-# BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 
 UNAME := $(shell uname)
 
@@ -79,13 +77,16 @@ SPATIALITE_EXTENSION="/usr/local/lib/mod_spatialite.dylib"
 endif
 endif
 
-all:: first-pass second-pass
+all:: first-pass second-pass third-pass
 
 first-pass::
 	@:
 
 # restart the make process to pick-up collected files
 second-pass::
+	@:
+
+third-pass::
 	@:
 
 # initialise
