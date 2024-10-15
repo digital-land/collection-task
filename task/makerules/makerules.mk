@@ -1,6 +1,10 @@
 # deduce the repository
 ifeq ($(REPOSITORY),)
+ifneq ($(COLLECTION_NAME),)
+REPOSITORY=$(COLLECTION_NAME)
+else
 REPOSITORY=$(shell basename -s .git `git config --get remote.origin.url`)
+endif
 endif
 
 ifeq ($(ENVIRONMENT),)
