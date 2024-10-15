@@ -52,6 +52,7 @@ COLLECTION_URL=\
 endif
 
 init::
+	echo Trying to download log.csv and resource.csv from $(COLLECTION_URL)
 	$(eval LOG_STATUS_CODE := $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(COLLECTION_URL)/log.csv'))
 	$(eval RESOURCE_STATUS_CODE = $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(COLLECTION_URL)/resource.csv'))
 	@if [ $(LOG_STATUS_CODE) -ne 403 ] && [ $(RESOURCE_STATUS_CODE) -ne 403 ]; then \
