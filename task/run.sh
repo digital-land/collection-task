@@ -40,24 +40,6 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 fi
 
 echo Transform collected files
-echo Check files exist:
-for FILE in var/cache/organisation.csv collection/resource/b560e6bb57850e641695323169b2613cdce18de7547d2d684070b1e5624009bb transformed/ancient-woodland/b560e6bb57850e641695323169b2613cdce18de7547d2d684070b1e5624009bb.csv
-do    
-    if [ -f "$FILE" ]; then
-        echo "$FILE exists."
-    else 
-        echo "$FILE does not exist."
-    fi
-done
-echo Check dirs exist:
-for DIR in pipeline issue/ancient-woodland var/column-field/ancient-woodland var/dataset-resource/ancient-woodland var/converted-resource/ancient-woodland
-do    
-    if [ -d "$DIR" ]; then
-        echo "$DIR exists."
-    else 
-        echo "$DIR does not exist."
-    fi
-done
 gmake transformed -j $TRANSFORMED_JOBS
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
