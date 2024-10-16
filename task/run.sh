@@ -40,7 +40,6 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 fi
 
 echo Transform collected files
-TRANSFORMED_JOBS=1
 gmake transformed -j $TRANSFORMED_JOBS
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
