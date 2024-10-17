@@ -35,7 +35,7 @@ echo Build the collection database
 make collection
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo Push collection database to Prod S3
+    echo Push collection database to $ENVIRONMENT S3
     make save-collection
 fi
 
@@ -43,7 +43,7 @@ echo Transform collected files
 gmake transformed -j $TRANSFORMED_JOBS
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo Save transformed files to Prod S3
+    echo Save transformed files to $ENVIRONMENT S3
     make save-transformed
 else
     echo "No COLECTION_DATASET_BUCKET_NAME defined so transformed files not pushed to s3"
@@ -53,7 +53,7 @@ echo Build datasets from the transformed files
 gmake dataset -j $DATASET_JOBS
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo Save datasets and expecations to Prod S3
+    echo Save datasets and expecations to $ENVIRONMENT S3
     make save-dataset
     make save-expectations
 else

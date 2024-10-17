@@ -3,7 +3,7 @@ ifeq ($(REPOSITORY),)
 ifneq ($(COLLECTION_NAME),)
 REPOSITORY=$(COLLECTION_NAME)-collection
 else
-REPOSITORY=$(shell basename -s .git `git config --get remote.origin.url`)
+echo "Repository variable not said as collection name not set"
 endif
 endif
 
