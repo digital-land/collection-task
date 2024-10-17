@@ -104,7 +104,7 @@ endif
 
 collection/resource/%:
 	@mkdir -p collection/resource/
-	curl -qfsL '$(DATASTORE_URL)$(REPOSITORY)-collection/$(RESOURCE_DIR)$(notdir $@)' > $@
+	curl -qfsL '$(DATASTORE_URL)$(REPOSITORY)/$(RESOURCE_DIR)$(notdir $@)' > $@
 
 collection/$(COLLECTION)/resource/%:
 	@mkdir -p collection/resource/
