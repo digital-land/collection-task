@@ -18,7 +18,7 @@ if [ -z "$DATASET_JOBS" ]; then
 fi
 
 echo Update makerules
-make init
+make makerules
 
 echo Install dependencies
 make init
