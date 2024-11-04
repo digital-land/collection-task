@@ -1,10 +1,6 @@
 # deduce the repository
 ifeq ($(REPOSITORY),)
-ifneq ($(COLLECTION_NAME),)
-REPOSITORY=$(COLLECTION_NAME)-collection
-else
-echo "REPOSITORY variable not set as COLLECTION_NAME not set"
-endif
+REPOSITORY=$(shell basename -s .git `git config --get remote.origin.url`)
 endif
 
 ifeq ($(ENVIRONMENT),)
@@ -75,7 +71,7 @@ LANG := C.UTF-8
 LC_COLLATE := C.UTF-8
 
 # current git branch
-# BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 
 UNAME := $(shell uname)
 
