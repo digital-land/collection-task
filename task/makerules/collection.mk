@@ -43,16 +43,15 @@ COLLECTION_INDEX=\
 	$(COLLECTION_DIR)/resource.csv
 
 # collection URL
-ifneq ($(COLLECTION_NAME),)
+ifneq ($(COLLECTION),)
 COLLECTION_URL=\
-	$(DATASTORE_URL)$(COLLECTION_NAME)-collection/collection
+	$(DATASTORE_URL)$(COLLECTION)-collection/collection
 else
 COLLECTION_URL=\
 	$(DATASTORE_URL)$(REPOSITORY)/collection
 endif
 
 init::
-	@echo Trying to download log.csv and resource.csv from $(COLLECTION_URL)
 	$(eval LOG_STATUS_CODE := $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(COLLECTION_URL)/log.csv'))
 	$(eval RESOURCE_STATUS_CODE = $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(COLLECTION_URL)/resource.csv'))
 	@if [ $(LOG_STATUS_CODE) -ne 403 ] && [ $(RESOURCE_STATUS_CODE) -ne 403 ]; then \
