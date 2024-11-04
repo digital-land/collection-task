@@ -17,6 +17,9 @@ if [ -z "$DATASET_JOBS" ]; then
     DATASET_JOBS=8
 fi
 
+echo Update makerules
+make init
+
 echo Install dependencies
 make init
 
