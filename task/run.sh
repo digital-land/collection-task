@@ -59,6 +59,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save datasets and expecations to $ENVIRONMENT S3
     make save-dataset
     make save-expectations
+    make save-performance
 else
     echo "No COLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
 fi
