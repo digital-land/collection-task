@@ -170,7 +170,7 @@ commit-collection::
 	@:
 
 state.json::
-	digital-land save-state --specification-dir=specification --collection-dir=collection --pipeline-dir=pipeline --output-path=state.json
+	digital-land save-state --specification-dir=specification --collection-dir=$(COLLECTION_DIR) --pipeline-dir=$(PIPELINE_DIR) --output-path=state.json
 
 save-state::
 	aws s3 cp state.json s3://$(COLLECTION_DATASET_BUCKET_NAME)/state.json --no-progress
