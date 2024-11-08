@@ -20,6 +20,8 @@ services:
     environment:
       COLLECTION_NAME: ancient-woodland
       COLLECTION_DATASET_BUCKET_NAME: local-collection-data
+      HOISTED_COLLECTION_DATASET_BUCKET_NAME: local-collection-data
+      # INCREMENTAL_LOADING_OVERRIDE: true
       AWS_ENDPOINT_URL: http://localstack:4566
       AWS_ACCESS_KEY_ID: dummyaccess
       AWS_SECRET_ACCESS_KEY: dummysecret
