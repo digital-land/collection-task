@@ -34,6 +34,24 @@ else
     echo "No COLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
 fi
 
+make load-state
+
+if [ -f "state.json" ]; then
+    if [ -n "$INCREMENTAL_LOADING_OVERRIDE" ]; then
+        echo Incremental loading disabled as override flag is set.
+    else
+        digital-land check-state \
+            --specification-dir=specification \
+            --collection-dir=collection \
+            --pipeline-dir=pipeline \
+            --state-path=state.json \
+        && {
+            echo "Stopping processing as state hasn't changed."
+            exit 0
+        }
+    fi
+fi
+
 echo Build the collection database
 make collection
 
@@ -64,6 +82,8 @@ else
     echo "No COLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
 fi
    
+make save-state
+
 # TODO: send notifications of errors
 
 # if [ -d /data ]; then
