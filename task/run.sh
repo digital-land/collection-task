@@ -40,11 +40,15 @@ if [ -f "state.json" ]; then
     if [ -n "$INCREMENTAL_LOADING_OVERRIDE" ]; then
         echo Incremental loading disabled as override flag is set.
     else
-        digital-land check-state --specification-dir=specification --collection-dir=collection --pipeline-dir=pipeline --state-path=state.json
-        if [ $? == 0 ]; then
+        digital-land check-state \
+            --specification-dir=specification \
+            --collection-dir=collection \
+            --pipeline-dir=pipeline \
+            --state-path=state.json \
+        && {
             echo "Stopping processing as state hasn't changed."
             exit 0
-        fi
+        }
     fi
 fi
 
