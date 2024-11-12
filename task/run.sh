@@ -34,12 +34,13 @@ else
     echo "No COLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
 fi
 
-make load-state
+echo "Incremental loading override: $INCREMENTAL_LOADING_OVERRIDE"
 
-if [ -f "state.json" ]; then
-    if [ -n "$INCREMENTAL_LOADING_OVERRIDE" ]; then
-        echo Incremental loading disabled as override flag is set.
-    else
+if [ "$INCREMENTAL_LOADING_OVERRIDE" = "True" ]; then
+    echo Incremental loading disabled as override flag is set.
+else
+    make load-state
+    if [ -f "state.json" ]; then
         digital-land check-state \
             --specification-dir=specification \
             --collection-dir=collection \
