@@ -34,27 +34,34 @@ else
     echo "No COLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
 fi
 
-echo "Incremental loading override: $INCREMENTAL_LOADING_OVERRIDE"
+echo Build the collection database
+make collection
 
 if [ "$INCREMENTAL_LOADING_OVERRIDE" = "True" ]; then
     echo Incremental loading disabled as override flag is set.
 else
-    make load-state
-    if [ -f "state.json" ]; then
-        digital-land check-state \
-            --specification-dir=specification \
-            --collection-dir=collection \
-            --pipeline-dir=pipeline \
-            --state-path=state.json \
-        && {
-            echo "Stopping processing as state hasn't changed."
-            exit 0
-        }
+    if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+        make load-state
+        if [ -f "state.json" ]; then
+            digital-land check-state \
+                --specification-dir=specification \
+                --collection-dir=collection \
+                --pipeline-dir=pipeline \
+                --state-path=state.json \
+            && {
+                echo "Stopping processing as state hasn't changed."
+                exit 0
+            }
+            else
+                echo "Icremental loading disabled as no state.json found."
+        fi
+        # Generate a new state file
+        rm -f state.json
+        make state.json
+    else
+        echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
     fi
 fi
-
-echo Build the collection database
-make collection
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Push collection database to $ENVIRONMENT S3
@@ -79,11 +86,10 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-dataset
     make save-expectations
     make save-performance
+    make save-state
 else
     echo "No COLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
 fi
-   
-make save-state
 
 # TODO: send notifications of errors
 
