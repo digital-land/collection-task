@@ -52,9 +52,11 @@ else
                 echo "Stopping processing as state hasn't changed."
                 exit 0
             }
+            else
+                echo "Icremental loading disabled as no state.json found."
         fi
         # Generate a new state file
-        rm state.json
+        rm -f state.json
         make state.json
     else
         echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
