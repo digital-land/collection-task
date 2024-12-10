@@ -107,7 +107,12 @@ PIPELINE_CONFIG_FILES=\
 	$(PIPELINE_DIR)patch.csv\
 	$(PIPELINE_DIR)skip.csv\
 	$(PIPELINE_DIR)transform.csv\
-	$(PIPELINE_DIR)entity-organisation.csv
+	$(PIPELINE_DIR)entity-organisation.csv\
+	$(PIPELINE_DIR)expect.csv
+endif
+
+ifeq ($(SPECIFICATION_DIR),)
+SPECIFICATION_DIR = specification/
 endif
 
 define run-pipeline
@@ -124,10 +129,7 @@ define build-dataset =
 	time digital-land ${DIGITAL_LAND_OPTS} --dataset $(notdir $(basename $@)) --pipeline-dir $(PIPELINE_DIR) dataset-entries-flattened $@ $(FLATTENED_DIR)
 	md5sum $@ $(basename $@).sqlite3
 	csvstack $(ISSUE_DIR)$(notdir $(basename $@))/*.csv > $(basename $@)-issue.csv
-	mkdir -p $(EXPECTATION_DIR)
-	time digital-land ${DIGITAL_LAND_OPTS} expectations-dataset-checkpoint --output-dir=$(EXPECTATION_DIR) --specification-dir=specification --data-path=$(basename $@).sqlite3
-	csvstack $(EXPECTATION_DIR)/**/$(notdir $(basename $@))-results.csv > $(basename $@)-expectation-result.csv
-	csvstack $(EXPECTATION_DIR)/**/$(notdir $(basename $@))-issues.csv > $(basename $@)-expectation-issue.csv
+	time digital-land ${DIGITAL_LAND_OPTS} expectations-dataset-checkpoint --dataset $(notdir $(basename $@)) --file-path $(basename $@).sqlite3  --log-dir=$(OUTPUT_LOG_DIR) --configuration-path $(CACHE_DIR)config.sqlite3 --organisation-path $(CACHE_DIR)organisation.csv --specification-dir $(SPECIFICATION_DIR)
 	time digital-land ${DIGITAL_LAND_OPTS} --dataset $(notdir $(basename $@)) operational-issue-save-csv --operational-issue-dir $(OPERATIONAL_ISSUE_DIR)
 endef
 
@@ -205,8 +207,8 @@ else
 endif
 
 save-expectations::
-	@mkdir -p $(EXPECTATION_DIR)
-	aws s3 sync $(EXPECTATION_DIR) s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(EXPECTATION_DIR) --exclude "*" --include "*.csv" --no-progress
+	@mkdir -p $(OUTPUT_LOG_DIR)
+	aws s3 sync $(OUTPUT_LOG_DIR) s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(OUTPUT_LOG_DIR) --no-progress
 
 save-performance::
 	@mkdir -p $(PERFORMANCE_DIR)
@@ -230,14 +232,12 @@ datasette:	metadata.json
 	--load-extension $(SPATIALITE_EXTENSION) \
 	--metadata metadata.json
 
-FALLBACK_CONFIG_URL := https://files.planning.data.gov.uk/config/pipeline/$(COLLECTION_NAME)/
-
 $(PIPELINE_DIR)%.csv:
 	@mkdir -p $(PIPELINE_DIR)
 	@if [ ! -f $@ ]; then \
-		echo "Config file $@ not found locally. Attempting to download..."; \
+		echo "Config file $@ not found locally. Attempting to download from s3...."; \
 		curl -qfsL '$(PIPELINE_CONFIG_URL)$(notdir $@)' -o $@ || \
-		(echo "File not found in config repo. Attempting to download from AWS..." && curl -qfsL '$(FALLBACK_CONFIG_URL)$(notdir $@)' -o $@); \
+		(echo "File not found in config repo: $(notdir $@)" && exit 1); \
 	fi
 
 config:: $(PIPELINE_CONFIG_FILES)
@@ -251,3 +251,12 @@ endif
 
 clean::
 	rm -f $(PIPELINE_CONFIG_FILES)
+
+state.json:
+	digital-land save-state --specification-dir=specification --collection-dir=$(COLLECTION_DIR) --pipeline-dir=$(PIPELINE_DIR) --output-path=state.json
+
+save-state:: state.json
+	aws s3 cp state.json s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/state.json --no-progress
+
+load-state::
+	aws s3 cp s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/state.json state.json --no-progress || echo state.json not found in s3 bucket $(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)
