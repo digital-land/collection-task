@@ -22,7 +22,7 @@ if [ -z "$DATASET_JOBS" ]; then
 fi
 
 echo Getting config
-if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME_NOT_SET_FOR_TEST" ]; then
     aws s3 sync s3://$(COLLECTION_DATASET_BUCKET_NAME)/config/$(COLLECTION_DIR)/$(REPOSITORY) $(COLLECTION_DIR) --no-progress
     aws s3 sync s3://$(COLLECTION_DATASET_BUCKET_NAME)/config/$(PIPELINE_DIR)/$(REPOSITORY) $(PIPELINE_DIR) --no-progress
 else
