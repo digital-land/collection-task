@@ -79,10 +79,6 @@ clobber-today::
 makerules::
 	curl -qfsL '$(MAKERULES_URL)collection.mk' > makerules/collection.mk
 
-commit-collection::
-	git add collection/log
-	git diff --quiet && git diff --staged --quiet || (git commit -m "Collection $(shell date +%F)"; git push origin $(BRANCH))
-
 load-resources::
 	aws s3 sync s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/$(RESOURCE_DIR) $(RESOURCE_DIR) --no-progress
 
@@ -100,14 +96,6 @@ save-collection::
 ifneq ($(wildcard $(COLLECTION_DIR)old-resource.csv),)
 	aws s3 cp $(COLLECTION_DIR)old-resource.csv s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/$(COLLECTION_DIR) --no-progress
 endif
-
-collection/resource/%:
-	@mkdir -p collection/resource/
-	curl -qfsL '$(DATASTORE_URL)$(REPOSITORY)/$(RESOURCE_DIR)$(notdir $@)' > $@
-
-collection/$(COLLECTION)/resource/%:
-	@mkdir -p collection/resource/
-	curl -qfsL '$(COLLECTION_URL)/resource/$(notdir $@)' > $@
 
 collection/%.csv:
 	@mkdir -p $(COLLECTION_DIR)

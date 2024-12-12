@@ -173,9 +173,10 @@ init::	$(CACHE_DIR)organisation.csv
 	@datasets=$$(awk -F , '$$2 == "$(COLLECTION_NAME)" {print $$4}' specification/dataset.csv); \
 	for dataset in $$datasets; do \
 		mkdir -p $(OPERATIONAL_ISSUE_DIR)$$dataset; \
+		echo "Get operational issue log from $(HOISTED_COLLECTION_DATASET_BUCKET_NAME)? ";\
 		url="$(DATASTORE_URL)$(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv"; \
 		echo "Downloading operational issue log for $$dataset at url $$url";\
-		status_code=$$(curl --write-out "%{http_code}" --silent --output /dev/null "$$url"); \
+		status_code=$$(curl --write-out "%{http_code}" --head --silent --output /dev/null "$$url"); \
 		if [ "$$status_code" -eq 200 ]; then \
 			echo "Downloading file..."; \
 			curl --silent --output "$(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv" "$$url"; \

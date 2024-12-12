@@ -21,8 +21,8 @@ if [ -z "$DATASET_JOBS" ]; then
     DATASET_JOBS=8
 fi
 
-echo Update makerules
-make makerules
+#echo Update makerules
+#make makerules
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Getting config from S3
