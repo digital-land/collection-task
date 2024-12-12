@@ -24,15 +24,15 @@ fi
 echo Update makerules
 make makerules
 
-echo Install dependencies
-make init
-
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Getting config from S3
     make get-config
 else
     echo "COLECTION_DATASET_BUCKET_NAME not set, unable to get config. (It will be obtained from the produdction CDN later.)"
 fi
+
+echo Install dependencies
+make init
 
 echo Run the collector
 make collect
