@@ -144,7 +144,11 @@ endif
 # local copy of organsiation datapackage
 $(CACHE_DIR)organisation.csv:
 	@mkdir -p $(CACHE_DIR)
+ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
 	curl -qfs "https://files.planning.data.gov.uk/organisation-collection/dataset/organisation.csv" > $(CACHE_DIR)organisation.csv
+else
+	aws s3 cp s3://$(COLLECTION_DATASET_BUCKET_NAME)/organisation-collection/dataset/organisation.csv $(CACHE_DIR)organisation.csv
+endif
 
 init:: config
 
