@@ -29,10 +29,9 @@ make init
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Getting config from S3
-    aws s3 sync s3://$COLLECTION_DATASET_BUCKET_NAME/config/collection/$COLLECTION_NAME-collection collection --no-progress
-    aws s3 sync s3://$COLLECTION_DATASET_BUCKET_NAME/config/pipleine/$COLLECTION_NAME-collection pipeline --no-progress
+    make get-config
 else
-    echo "COLECTION_DATASET_BUCKET_NAME not set, unable to get config from S3. (It will be obtained from the produdction CDN later.)"
+    echo "COLECTION_DATASET_BUCKET_NAME not set, unable to get config. (It will be obtained from the produdction CDN later.)"
 fi
 
 echo Run the collector
