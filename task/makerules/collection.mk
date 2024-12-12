@@ -52,6 +52,7 @@ COLLECTION_URL=\
 endif
 
 init::
+ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
 	$(eval LOG_STATUS_CODE := $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(COLLECTION_URL)/log.csv'))
 	$(eval RESOURCE_STATUS_CODE = $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(COLLECTION_URL)/resource.csv'))
 	@if [ $(LOG_STATUS_CODE) -ne 403 ] && [ $(RESOURCE_STATUS_CODE) -ne 403 ]; then \
@@ -61,6 +62,9 @@ init::
 	else \
 		echo 'Unable to locate log.csv and resource.csv' ;\
 	fi
+else
+	@;
+endif
 
 first-pass:: collect
 
@@ -101,7 +105,13 @@ collection/%.csv:
 	@mkdir -p $(COLLECTION_DIR)
 	curl -qfsL '$(COLLECTION_CONFIG_URL)$(notdir $@)' > $@
 
+
+ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
 config:: $(COLLECTION_CONFIG_FILES)
+else
+config::
+	aws s3 sync s3://$(COLLECTION_DATASET_BUCKET_NAME)/config/$(COLLECTION_DIR)$(COLLECTION_NAME) $(COLLECTION_DIR) --no-progress
+endif
 
 clean::
 	rm -f $(COLLECTION_CONFIG_FILES)
