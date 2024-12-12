@@ -11,6 +11,6 @@ include makerules/development.mk
 include makerules/collection.mk
 include makerules/pipeline.mk
 
-get-config:
+get-config::
     aws s3 sync s3://$(COLLECTION_DATASET_BUCKET_NAME)/config/$(COLLECTION_DIR)/$(REPOSITORY) $(COLLECTION_DIR) --no-progress
     aws s3 sync s3://$(COLLECTION_DATASET_BUCKET_NAME)/config/$(PIPELINE_DIR)/$(REPOSITORY) $(PIPELINE_DIR) --no-progress
