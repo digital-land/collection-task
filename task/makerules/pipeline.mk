@@ -168,7 +168,7 @@ clean::
 
 # local copy of the organisation dataset
 # Download historic operational issue log data for relevant datasets
-init::	$(CACHE_DIR)organisation.csv
+init:: $(CACHE_DIR)organisation.csv
 ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
 	@datasets=$$(awk -F , '$$2 == "$(COLLECTION_NAME)" {print $$4}' specification/dataset.csv); \
 	for dataset in $$datasets; do \
@@ -188,24 +188,8 @@ else
 	@datasets=$$(awk -F , '$$2 == "$(COLLECTION_NAME)" {print $$4}' specification/dataset.csv); \
 	for dataset in $$datasets; do \
 		mkdir -p $(OPERATIONAL_ISSUE_DIR)$$dataset; \
-		aws s3 cp $(HOISTED_COLLECTION_DATASET_BUCKET_NAME)/$(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv $(OPERATIONAL_ISSUE_DIR)/$$dataset/operational-issue.csv --no-progress; \
+		aws s3 cp s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv $(OPERATIONAL_ISSUE_DIR)/$$dataset/operational-issue.csv --no-progress; \
 	done
-endif
-
-$(OPERATIONAL_ISSUE_DIR)/%/operational-issue.csv:
-	mkdir -p $(OPERATIONAL_ISSUE_DIR)$@
-ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
-	url="$(DATASTORE_URL)$(OPERATIONAL_ISSUE_DIR)$@/operational-issue.csv"
-	echo "Downloading operational issue log for $@ at url $$url"
-	status_code=$$(curl --write-out "%{http_code}" --head --silent --output /dev/null "$$url")
-	if [ "$$status_code" -eq 200 ]; then
-		curl --silent --output "$(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv" "$$url"
-		echo "Log downloaded to $(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv"
-	else
-		echo "File not found at $$url"
-	fi
-else
-	aws s3 cp $(HOISTED_COLLECTION_DATASET_BUCKET_NAME)/$(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv $(OPERATIONAL_ISSUE_DIR)/$$dataset/operational-issue.csv --no-progress
 endif
 
 makerules::
