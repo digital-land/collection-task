@@ -51,8 +51,8 @@ COLLECTION_URL=\
 	$(DATASTORE_URL)$(REPOSITORY)/collection
 endif
 
-init::
 ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
+init::
 	$(eval LOG_STATUS_CODE := $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(COLLECTION_URL)/log.csv'))
 	$(eval RESOURCE_STATUS_CODE = $(shell curl -I -o /dev/null -s -w "%{http_code}" '$(COLLECTION_URL)/resource.csv'))
 	@if [ $(LOG_STATUS_CODE) -ne 403 ] && [ $(RESOURCE_STATUS_CODE) -ne 403 ]; then \
@@ -62,8 +62,6 @@ ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
 	else \
 		echo 'Unable to locate log.csv and resource.csv' ;\
 	fi
-else
-	@;
 endif
 
 first-pass:: collect
