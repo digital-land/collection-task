@@ -99,6 +99,22 @@ ifneq ($(wildcard $(COLLECTION_DIR)old-resource.csv),)
 	aws s3 cp $(COLLECTION_DIR)old-resource.csv s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/$(COLLECTION_DIR) --no-progress
 endif
 
+collection/resource/%:
+	@mkdir -p collection/resource/
+ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
+	curl -qfsL '$(DATASTORE_URL)$(REPOSITORY)/$(RESOURCE_DIR)$(notdir $@)' > $@
+else
+	aws s3 cp s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/$(RESOURCE_DIR)$()/$(notdir $@) $@ --no-progress
+endif
+
+collection/$(COLLECTION)/resource/%:
+	@mkdir -p collection/$(COLLECTION)/resource
+ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
+	curl -qfsL '$(DATASTORE_URL)$(REPOSITORY)/$(RESOURCE_DIR)$(notdir $@)' > $@
+else
+	aws s3 cp s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/$(RESOURCE_DIR)/$(notdir $@) $@ --no-progress
+endif
+
 collection/%.csv:
 	@mkdir -p $(COLLECTION_DIR)
 ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
