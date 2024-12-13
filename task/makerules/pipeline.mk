@@ -241,24 +241,16 @@ datasette:	metadata.json
 
 $(PIPELINE_DIR)%.csv:
 	@mkdir -p $(PIPELINE_DIR)
-	@if [ ! -f $@ ]; then \
-		echo "Config file $@ not found locally. Attempting to download from s3...."; \
-		curl -qfsL '$(PIPELINE_CONFIG_URL)$(notdir $@)' -o $@ || \
-		(echo "File not found in config repo: $(notdir $@)" && exit 1); \
-	fi
-
 ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
+	curl -qfsL '$(PIPELINE_CONFIG_URL)$(notdir $@)' -o $@
+else
+	aws s3 cp s3://$(COLLECTION_DATASET_BUCKET_NAME)/config/$(PIPELINE_DIR)$(COLLECTION_NAME)/$(notdir $@) $@ --no-progress
+endif
+
 config:: $(PIPELINE_CONFIG_FILES)
 ifeq ($(PIPELINE_CONFIG_FILES), .dummy)
 	echo "pipeline_config_files are dummy not making config.sqlite" 
 else
-	mkdir -p $(CACHE_DIR)
-	digital-land --pipeline-dir $(PIPELINE_DIR) config-create --config-path $(CACHE_DIR)config.sqlite3
-	digital-land --pipeline-dir $(PIPELINE_DIR) config-load --config-path $(CACHE_DIR)config.sqlite3
-endif
-else
-config::
-	aws s3 sync s3://$(COLLECTION_DATASET_BUCKET_NAME)/config/$(PIPELINE_DIR)$(COLLECTION_NAME) $(PIPELINE_DIR) --no-progress
 	mkdir -p $(CACHE_DIR)
 	digital-land --pipeline-dir $(PIPELINE_DIR) config-create --config-path $(CACHE_DIR)config.sqlite3
 	digital-land --pipeline-dir $(PIPELINE_DIR) config-load --config-path $(CACHE_DIR)config.sqlite3

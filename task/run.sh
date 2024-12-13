@@ -9,10 +9,6 @@ if [ -z "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "assign value to COLLECTION_DATASET_BUCKET_NAME to save to a bucket" 
 fi
 
-if [ -n "$ENVIRONMENT" ]; then
-    CONFIG_BUCKET_NAME=$ENVIRONMENT-config
-fi
-
 if [ -z "$TRANSFORMED_JOBS" ]; then
     TRANSFORMED_JOBS=8
 fi

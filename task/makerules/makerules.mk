@@ -16,7 +16,7 @@ MAKERULES_URL=$(SOURCE_URL)makerules/main/
 endif
 
 ifeq ($(CONFIG_URL),)
-CONFIG_URL=https://files.planning.data.gov.uk/config/
+CONFIG_URL=$(DATASTORE_URL)config/
 endif
 
 ifeq ($(COLLECTION_NAME),)
@@ -145,7 +145,7 @@ endif
 $(CACHE_DIR)organisation.csv:
 	@mkdir -p $(CACHE_DIR)
 ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
-	curl -qfs "https://files.planning.data.gov.uk/organisation-collection/dataset/organisation.csv" > $(CACHE_DIR)organisation.csv
+	curl -qfs "$(DATASTORE_URL)organisation-collection/dataset/organisation.csv" > $(CACHE_DIR)organisation.csv
 else
 	aws s3 cp s3://$(COLLECTION_DATASET_BUCKET_NAME)/organisation-collection/dataset/organisation.csv $(CACHE_DIR)organisation.csv
 endif
