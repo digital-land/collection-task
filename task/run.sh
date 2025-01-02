@@ -37,6 +37,12 @@ fi
 echo Build the collection database
 make collection
 
+if [ "$REGENERATE_LOG_OVERRIDE" = "True" ]; then
+  echo Regenerate log override is set to True
+else
+  echo Regenerate log override is set to False
+fi
+
 if [ "$INCREMENTAL_LOADING_OVERRIDE" = "True" ]; then
     echo Incremental loading disabled as override flag is set.
 else
@@ -61,12 +67,6 @@ else
     else
         echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
     fi
-fi
-
-if [ "$REGENERATE_LOG_OVERRIDE" = "True" ]; then
-  echo Regenerate log override is set to True
-else
-  echo Regenerate log override is set to False
 fi
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
