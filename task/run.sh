@@ -63,6 +63,12 @@ else
     fi
 fi
 
+if [ "$REGENERATE_LOG_OVERRIDE" = "True" ]; then
+  echo Regenerate log override is set to True
+else
+  echo Regenerate log override is set to False
+fi
+
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Push collection database to $ENVIRONMENT S3
     make save-collection
