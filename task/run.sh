@@ -23,20 +23,6 @@ make makerules
 echo Install dependencies
 make init
 
-echo Run the collector
-make collect
-
-if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
-    make save-resources
-    make save-logs
-else
-    echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
-fi
-
-echo Build the collection database
-make collection
-
 if [ "$REGENERATE_LOG_OVERRIDE" = "True" ]; then
   echo Regenerate log enabled so downloading all log files
     if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
@@ -50,6 +36,20 @@ if [ "$REGENERATE_LOG_OVERRIDE" = "True" ]; then
 else
   echo Regenerate log disabled as override flag is set to False
 fi
+
+echo Run the collector
+make collect
+
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
+    make save-resources
+    make save-logs
+else
+    echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
+fi
+
+echo Build the collection database
+make collection
 
 if [ "$INCREMENTAL_LOADING_OVERRIDE" = "True" ]; then
     echo Incremental loading disabled as override flag is set.
