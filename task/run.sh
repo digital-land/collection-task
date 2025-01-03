@@ -41,6 +41,9 @@ if [ "$REGENERATE_LOG_OVERRIDE" = "True" ]; then
   echo Regenerate log enabled so downloading all log files
     if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
         make load-logs
+        echo "File exists before deletion: $(ls collection/log.csv 2>/dev/null || echo 'No')"
+        rm -f collection/log.csv collection/resource.csv
+        echo "File exists after deletion: $(ls collection/log.csv 2>/dev/null || echo 'No')"
     else
         echo "Regenerate log is disabled as no COLLECTION_DATASET_BUCKET_NAME defined to get previous log files"
     fi
