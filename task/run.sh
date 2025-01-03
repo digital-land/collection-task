@@ -31,16 +31,22 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-resources
     make save-logs
 else
-    echo "No COLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
+    echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
 fi
 
 echo Build the collection database
 make collection
 
 if [ "$REGENERATE_LOG_OVERRIDE" = "True" ]; then
-  echo Regenerate log override is set to True
+  echo Regenerate log enabled so downloading all log files
+    if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+        make load-logs
+        rm -f collection/log.csv collection/resource.csv
+    else
+        echo "Regenerate log is disabled as no COLLECTION_DATASET_BUCKET_NAME defined to get previous log files"
+    fi
 else
-  echo Regenerate log override is set to False
+  echo Regenerate log disabled as override flag is set to False
 fi
 
 if [ "$INCREMENTAL_LOADING_OVERRIDE" = "True" ]; then
@@ -59,7 +65,7 @@ else
                 exit 0
             }
             else
-                echo "Icremental loading disabled as no state.json found."
+                echo "Incremental loading disabled as no state.json found."
         fi
         # Generate a new state file
         rm -f state.json
@@ -94,7 +100,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-performance
     make save-state
 else
-    echo "No COLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
+    echo "No COLLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
 fi
 
 # TODO: send notifications of errors
