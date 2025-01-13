@@ -31,7 +31,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-resources
     make save-logs
 else
-    echo "No COLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
+    echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
 fi
 
 echo Build the collection database
@@ -53,7 +53,7 @@ else
                 exit 0
             }
             else
-                echo "Icremental loading disabled as no state.json found."
+                echo "Incremental loading disabled as no state.json found."
         fi
         # Generate a new state file
         rm -f state.json
@@ -88,7 +88,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-performance
     make save-state
 else
-    echo "No COLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
+    echo "No COLLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
 fi
 
 # TODO: send notifications of errors
