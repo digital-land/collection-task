@@ -26,6 +26,9 @@ make init
 echo Run the collector
 make collect
 
+echo Build the collection database
+make collection
+
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
     make save-resources
@@ -33,9 +36,6 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
 fi
-
-echo Build the collection database
-make collection
 
 if [ "$INCREMENTAL_LOADING_OVERRIDE" = "True" ]; then
     echo Incremental loading disabled as override flag is set.
@@ -75,7 +75,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save transformed files to $ENVIRONMENT S3
     make save-transformed
 else
-    echo "No COLECTION_DATASET_BUCKET_NAME defined so transformed files not pushed to s3"
+    echo "No COLLECTION_DATASET_BUCKET_NAME defined so transformed files not pushed to s3"
 fi
 
 echo Build datasets from the transformed files
