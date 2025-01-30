@@ -49,6 +49,8 @@ else
                 --pipeline-dir=pipeline \
                 --state-path=state.json \
             && {
+                echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."
+                make save-collection-log-resource
                 echo "Stopping processing as state hasn't changed."
                 exit 0
             }
