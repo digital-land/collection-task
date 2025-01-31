@@ -17,6 +17,9 @@ if [ -z "$DATASET_JOBS" ]; then
     DATASET_JOBS=8
 fi
 
+echo "refill todays logs:"
+echo $REFILL_TODAYS_LOGS
+
 echo Update makerules
 make makerules
 
