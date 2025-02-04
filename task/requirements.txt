@@ -1,1 +1,1 @@
--e git+https://github.com/digital-land/pipeline.git@main#egg=digital-land
+-e git+https://github.com/digital-land/pipeline.git@feat/refill_todays_logs#egg=digital-land
