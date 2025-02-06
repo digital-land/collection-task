@@ -65,6 +65,14 @@ else
     fi
 fi
 
+echo Determine new resources that have been downloaded
+aws s3 sync $(RESOURCE_DIR) s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/$(RESOURCE_DIR) --dryrun
+
+aws s3 sync $(RESOURCE_DIR) s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(REPOSITORY)/$(RESOURCE_DIR) --dryrun > new_resources
+cat new_resources
+
+exit 0
+
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Push collection database to $ENVIRONMENT S3
     make save-collection
