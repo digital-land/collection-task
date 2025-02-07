@@ -71,11 +71,11 @@ else
 	fi
 
     echo $STATE_CHANGED
-    echo "$$STATE_CHANGED"
+    echo "$STATE_CHANGED"
     echo $NEW_RESOURCES
-    echo "$$NEW_RESOURCES"
+    echo "$NEW_RESOURCES"
 	# Exit if both STATE_CHANGED=False and NEW_RESOURCES=False
-	if [ "$$STATE_CHANGED" = "False" ] && [ "$$NEW_RESOURCES" = "False" ]; then \
+	if [ "$STATE_CHANGED" = "False" ] && [ "$NEW_RESOURCES" = "False" ]; then \
 		echo "No state change and no new resources. Exiting early."; \
 		exit 0; \
 	fi
