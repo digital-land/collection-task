@@ -30,7 +30,6 @@ echo Build the collection database
 make collection
 
 make new-resources-list
-exit 0
 
 # if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 #     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
@@ -75,6 +74,8 @@ else
     fi
 fi
 
+echo Hello after incremental loading
+exit 0
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Push collection database to $ENVIRONMENT S3
