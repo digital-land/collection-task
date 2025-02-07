@@ -70,13 +70,11 @@ else
 		NEW_RESOURCES=True; \
 	fi
 
-    echo $STATE_CHANGED
-    echo "$STATE_CHANGED"
-    echo $NEW_RESOURCES
-    echo "$NEW_RESOURCES"
 	# Exit if both STATE_CHANGED=False and NEW_RESOURCES=False
 	if [ "$STATE_CHANGED" = "False" ] && [ "$NEW_RESOURCES" = "False" ]; then \
-		echo "No state change and no new resources. Exiting early."; \
+        echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."
+        make save-collection-log-resource
+		echo "No state change and no new resources. Stopping processing."; \
 		exit 0; \
 	fi
 
