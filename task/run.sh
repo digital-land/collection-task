@@ -32,13 +32,13 @@ make collection
 make new-resources-list
 exit 0
 
-if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
-    make save-resources
-    make save-logs
-else
-    echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
-fi
+# if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+#     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
+#     make save-resources
+#     make save-logs
+# else
+#     echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
+# fi
 
 if [ "$INCREMENTAL_LOADING_OVERRIDE" = "True" ]; then
     echo Incremental loading disabled as override flag is set.
@@ -52,14 +52,21 @@ else
                 --pipeline-dir=pipeline \
                 --state-path=state.json \
             && {
-                echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."
-                make save-collection-log-resource
-                echo "Stopping processing as state hasn't changed."
-                exit 0
+                # Check if new resources have been downloaded
+                if [ `wc -l < new_resources.txt` -gt 0 ]; then \
+                    echo "Incremental loading disabled as new resources detected"; \
+                else \
+                    echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."
+                    make save-collection-log-resource
+                    echo "Stopping processing as state hasn't changed and no new resources downloaded."
+                    exit 0
+                fi
+                
             }
             else
                 echo "Incremental loading disabled as no state.json found."
         fi
+
         # Generate a new state file
         rm -f state.json
         make state.json
