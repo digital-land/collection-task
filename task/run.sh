@@ -51,7 +51,7 @@ else
                 --pipeline-dir=pipeline \
                 --state-path=state.json \
             && { \
-			echo "Stopping processing as state hasn't changed."; \
+			echo "State is unchanged."; \
 			STATE_CHANGED=False; \
 		} || { \
             echo "State has changed."; \
@@ -88,10 +88,10 @@ fi
 echo Hello after incremental loading
 
 
-# if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-#     echo Push collection database to $ENVIRONMENT S3
-#     make save-collection
-# fi
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo Push collection database to $ENVIRONMENT S3
+    make save-collection
+fi
 
 echo Transform collected files
 gmake transformed -j $TRANSFORMED_JOBS
