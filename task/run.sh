@@ -31,13 +31,13 @@ make collection
 
 make new-resources-list
 
-# if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-#     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
-#     make save-resources
-#     make save-logs
-# else
-#     echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
-# fi
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
+    make save-resources
+    make save-logs
+else
+    echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
+fi
 
 if [ "$INCREMENTAL_LOADING_OVERRIDE" = "True" ]; then
     echo Incremental loading disabled as override flag is set.
