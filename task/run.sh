@@ -75,7 +75,7 @@ else
 fi
 
 echo Hello after incremental loading
-exit 0
+
 
 # if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 #     echo Push collection database to $ENVIRONMENT S3
