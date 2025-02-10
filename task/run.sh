@@ -29,6 +29,9 @@ make collect
 echo Build the collection database
 make collection
 
+echo Detect new resources that have been downloaded
+make detect-new-resources
+
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
     make save-resources
@@ -48,22 +51,43 @@ else
                 --collection-dir=collection \
                 --pipeline-dir=pipeline \
                 --state-path=state.json \
-            && {
-                echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."
-                make save-collection-log-resource
-                echo "Stopping processing as state hasn't changed."
-                exit 0
-            }
-            else
-                echo "Incremental loading disabled as no state.json found."
+            && { \
+			echo "State is unchanged."; \
+			STATE_CHANGED=False; \
+		} || { \
+            echo "State has changed."; \
+			STATE_CHANGED=True; \
+		}; \
+        else \
+            echo "No state.json found."; \
+            STATE_CHANGED=True; \
         fi
-        # Generate a new state file
-        rm -f state.json
-        make state.json
+
+	if [ `wc -l < new_resources.txt` -eq 0 ]; then \
+		echo "No new resources detected."; \
+		NEW_RESOURCES=False; \
+	else \
+		echo "New resources detected."; \
+		NEW_RESOURCES=True; \
+	fi
+
+	# Exit if the state is unchanged AND there are no new resources
+	if [ "$STATE_CHANGED" = "False" ] && [ "$NEW_RESOURCES" = "False" ]; then \
+        echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."
+        make save-collection-log-resource
+		echo "No state change and no new resources. Stopping processing."; \
+		exit 0; \
+	fi
+
+
+    # Generate a new state file
+    rm -f state.json
+    make state.json
     else
         echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
     fi
 fi
+
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Push collection database to $ENVIRONMENT S3
