@@ -29,7 +29,8 @@ make collect
 echo Build the collection database
 make collection
 
-make new-resources-list
+echo Detect new resources that have been downloaded
+make detect-new-resources
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
@@ -58,7 +59,7 @@ else
 			STATE_CHANGED=True; \
 		}; \
         else \
-            echo "Incremental loading disabled as no state.json found."; \
+            echo "No state.json found."; \
             STATE_CHANGED=True; \
         fi
 
@@ -70,7 +71,7 @@ else
 		NEW_RESOURCES=True; \
 	fi
 
-	# Exit if both STATE_CHANGED=False and NEW_RESOURCES=False
+	# Exit if the state is unchanged AND there are no new resources
 	if [ "$STATE_CHANGED" = "False" ] && [ "$NEW_RESOURCES" = "False" ]; then \
         echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."
         make save-collection-log-resource
@@ -86,8 +87,6 @@ else
         echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
     fi
 fi
-
-echo Hello after incremental loading
 
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
