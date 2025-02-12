@@ -12,7 +12,7 @@ SOURCE_URL=https://raw.githubusercontent.com/digital-land/
 endif
 
 ifeq ($(MAKERULES_URL),)
-MAKERULES_URL=$(SOURCE_URL)makerules/main/
+MAKERULES_URL=$(SOURCE_URL)makerules/fix-log-csv-and-resource-csv-download/
 endif
 
 ifeq ($(CONFIG_URL),)
