@@ -50,7 +50,7 @@ else
                 --specification-dir=specification \
                 --collection-dir=collection \
                 --pipeline-dir=pipeline \
-                --resource=dir=collection/resource \
+                --resource-dir=collection/resource \
                 --incremental-override=$INCREMENTAL_LOADING_OVERRIDE
                 --state-path=state.json \
             && { \
