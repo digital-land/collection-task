@@ -51,7 +51,7 @@ else
                 --collection-dir=collection \
                 --pipeline-dir=pipeline \
                 --resource-dir=collection/resource \
-                --incremental-override=$INCREMENTAL_LOADING_OVERRIDE
+                --incremental-override=$INCREMENTAL_LOADING_OVERRIDE \
                 --state-path=state.json \
             && { \
 			echo "State is unchanged."; \
