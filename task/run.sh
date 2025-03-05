@@ -27,10 +27,10 @@ echo Run the collector
 make collect
 
 # we need a make save-state here as we need current_state.json for make collection
-# state from s3 is historical_state.json
+# state from s3 should be named something like historical_state.json
 
 echo Build the collection database
-make collection #read from current_state.json here
+make collection # we will read from current_state.json here
 
 echo Detect new resources that have been downloaded
 make detect-new-resources
@@ -68,31 +68,10 @@ else
 		}; \
         else \
             echo "No state.json found."; \
-            STATE_CHANGED=True; \
         fi
 
-	# if [ `wc -l < new_resources.txt` -eq 0 ]; then \
-	# 	echo "No new resources detected."; \
-	# 	NEW_RESOURCES=False; \
-	# else \
-	# 	echo "New resources detected."; \
-	# 	NEW_RESOURCES=True; \
-	# fi
-
-	# # Exit if the state is unchanged AND there are no new resources
-	# if [ "$STATE_CHANGED" = "False" ] && [ "$NEW_RESOURCES" = "False" ]; then \
-    #     echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."
-    #     make save-collection-log-resource
-	# 	echo "No state change and no new resources. Stopping processing."; \
-    #     # Generate a new state file and upload to s3
-    #     rm -f state.json; \
-    #     make state.json; \
-    #     make save-state; \
-	# 	exit 0; \
-	# fi
-
-
     # Generate a new state file
+    # We will have to move this earlier in the future
     rm -f state.json
     make state.json
     else
