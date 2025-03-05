@@ -78,6 +78,10 @@ else
         echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."
         make save-collection-log-resource
 		echo "No state change and no new resources. Stopping processing."; \
+        # Generate a new state file
+        rm -f state.json; \
+        make state.json; \
+        make save-state; \
 		exit 0; \
 	fi
 
