@@ -50,7 +50,6 @@ else
             rm -f state.json; \
             make state.json; \
             make save-state; \
-            exit 0; \
 		}; \
         else \
             echo "No state.json found."; \
@@ -67,6 +66,8 @@ fi
 
 echo Build the collection database
 make collection # we will read from current_state.json here
+
+cat collection/pipeline.mk
 
 echo Detect new resources that have been downloaded
 make detect-new-resources
