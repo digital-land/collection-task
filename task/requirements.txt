@@ -1,1 +1,1 @@
--e git+https://github.com/digital-land/pipeline.git@main#egg=digital-land
+-e git+https://github.com/digital-land/pipeline.git@bug/fixing_bfl_end_dates#egg=digital-land
