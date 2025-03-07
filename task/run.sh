@@ -40,7 +40,7 @@ else
                 --collection-dir=collection \
                 --pipeline-dir=pipeline \
                 --resource-dir=collection/resource \
-                --incremental-override=$INCREMENTAL_LOADING_OVERRIDE \
+                --incremental-loading-override=$INCREMENTAL_LOADING_OVERRIDE \
                 --state-path=state.json \
             && { \
             echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."; \
@@ -91,7 +91,7 @@ else
                 --collection-dir=collection \
                 --pipeline-dir=pipeline \
                 --resource-dir=collection/resource \
-                --incremental-override=$INCREMENTAL_LOADING_OVERRIDE \
+                --incremental-loading-override=$INCREMENTAL_LOADING_OVERRIDE \
                 --state-path=state.json \
             && { \
             echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."; \
