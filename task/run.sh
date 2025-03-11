@@ -35,6 +35,8 @@ fi
 echo Build the collection database
 make collection
 
+cat collection/pipeline.mk
+
 echo Detect new resources that have been downloaded
 make detect-new-resources
 
