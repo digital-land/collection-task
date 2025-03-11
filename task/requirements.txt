@@ -1,1 +1,1 @@
--e git+https://github.com/digital-land/pipeline.git@main#egg=digital-land
+-e git+https://github.com/digital-land/pipeline.git@check-state-in-collection-pipeline-makerules#egg=digital-land

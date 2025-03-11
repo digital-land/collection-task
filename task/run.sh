@@ -26,11 +26,14 @@ make init
 echo Run the collector
 make collect
 
-# we need a make save-state here as we need current_state.json for make collection
-# state from s3 should be named something like historical_state.json
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    make load-state
+else
+    echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
+fi
 
 echo Build the collection database
-make collection # we will read from current_state.json here
+make collection
 
 echo Detect new resources that have been downloaded
 make detect-new-resources
@@ -42,43 +45,6 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
 fi
-
-if [ "$INCREMENTAL_LOADING_OVERRIDE" = "True" ]; then
-    echo Incremental loading disabled as override flag is set.
-else
-    if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-        make load-state
-        if [ -f "state.json" ]; then
-            digital-land check-state \
-                --specification-dir=specification \
-                --collection-dir=collection \
-                --pipeline-dir=pipeline \
-                --resource-dir=collection/resource \
-                --incremental-override=$INCREMENTAL_LOADING_OVERRIDE \
-                --state-path=state.json \
-            && { \
-            echo "Incremental loading enabled. Saving log.csv and resource.csv to $COLLECTION_DATASET_BUCKET_NAME."; \
-            make save-collection-log-resource; \
-            echo "No state change and no new resources. Stopping processing."; \
-            # Generate a new state file and upload to s3
-            rm -f state.json; \
-            make state.json; \
-            make save-state; \
-            exit 0; \
-		}; \
-        else \
-            echo "No state.json found."; \
-        fi
-
-    # Generate a new state file
-    # We will have to move this earlier in the future
-    rm -f state.json
-    make state.json
-    else
-        echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
-    fi
-fi
-
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Push collection database to $ENVIRONMENT S3
