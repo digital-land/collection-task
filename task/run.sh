@@ -37,6 +37,7 @@ cat state.json
 echo Build the collection database
 make collection
 
+rm -f state.json
 make state.json
 cat state.json
 
