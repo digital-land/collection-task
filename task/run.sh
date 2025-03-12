@@ -37,6 +37,9 @@ cat state.json
 echo Build the collection database
 make collection
 
+make state.json
+cat state.json
+
 cat collection/pipeline.mk
 
 echo Detect new resources that have been downloaded
