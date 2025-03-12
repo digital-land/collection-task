@@ -32,6 +32,8 @@ else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
 fi
 
+cat state.json
+
 echo Build the collection database
 make collection
 
