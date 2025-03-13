@@ -32,16 +32,8 @@ else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
 fi
 
-cat state.json
-
 echo Build the collection database
 make collection
-
-rm -f state.json
-make state.json
-cat state.json
-
-cat collection/pipeline.mk
 
 echo Detect new resources that have been downloaded
 make detect-new-resources
@@ -62,9 +54,6 @@ fi
 echo Transform collected files
 gmake transformed -j $TRANSFORMED_JOBS
 
-echo "TRANSFORMED DIR:"
-echo "$TRANSFORMED_DIR"
-
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save transformed files to $ENVIRONMENT S3
     make save-transformed
@@ -80,6 +69,9 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-dataset
     make save-expectations
     make save-performance
+
+    rm -f state.json
+    make state.json
     make save-state
 else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
