@@ -62,6 +62,9 @@ fi
 echo Transform collected files
 gmake transformed -j $TRANSFORMED_JOBS
 
+echo "TRANSFORMED DIR:"
+echo "$TRANSFORMED_DIR"
+
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save transformed files to $ENVIRONMENT S3
     make save-transformed
