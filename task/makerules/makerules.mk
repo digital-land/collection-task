@@ -12,11 +12,11 @@ SOURCE_URL=https://raw.githubusercontent.com/digital-land/
 endif
 
 ifeq ($(MAKERULES_URL),)
-MAKERULES_URL=$(SOURCE_URL)makerules/main/
+MAKERULES_URL=$(SOURCE_URL)makerules/check-fix-FRZ/
 endif
 
 ifeq ($(CONFIG_URL),)
-CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/main/
+CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/fix-FRZ/
 endif
 
 ifeq ($(COLLECTION_NAME),)
