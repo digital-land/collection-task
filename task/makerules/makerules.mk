@@ -12,7 +12,7 @@ SOURCE_URL=https://raw.githubusercontent.com/digital-land/
 endif
 
 ifeq ($(MAKERULES_URL),)
-MAKERULES_URL=$(SOURCE_URL)makerules/check-state-in-collection-pipeline-makerules/
+MAKERULES_URL=$(SOURCE_URL)makerules/main/
 endif
 
 ifeq ($(CONFIG_URL),)
