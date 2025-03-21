@@ -35,6 +35,7 @@ fi
 echo Build the collection database
 make collection
 
+echo collection pipeline commands
 cat collection/pipeline.mk
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
