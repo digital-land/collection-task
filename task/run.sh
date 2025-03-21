@@ -49,7 +49,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 fi
 
 echo Transform collected files
-gmake transformed -j $TRANSFORMED_JOBS
+gmake --debug=v transformed -j1 $TRANSFORMED_JOBS
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save transformed files to $ENVIRONMENT S3
