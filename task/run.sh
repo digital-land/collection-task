@@ -35,6 +35,8 @@ fi
 echo Build the collection database
 make collection
 
+cat collection/pipeline.mk
+
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
     make save-resources
