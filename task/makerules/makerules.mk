@@ -12,7 +12,7 @@ SOURCE_URL=https://raw.githubusercontent.com/digital-land/
 endif
 
 ifeq ($(MAKERULES_URL),)
-MAKERULES_URL=$(SOURCE_URL)makerules/main/
+MAKERULES_URL=$(SOURCE_URL)makerules/test-planning-application-makerules/
 endif
 
 ifeq ($(CONFIG_URL),)
@@ -137,8 +137,8 @@ specification::
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/licence.csv' > specification/licence.csv
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/typology.csv' > specification/typology.csv
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/theme.csv' > specification/theme.csv
-	curl -qfsL '$(SOURCE_URL)/specification/main/specification/collection.csv' > specification/collection.csv
-	curl -qfsL '$(SOURCE_URL)/specification/main/specification/dataset.csv' > specification/dataset.csv
+	curl -qfsL '$(SOURCE_URL)/specification/planning-application-collection/specification/collection.csv' > specification/collection.csv
+	curl -qfsL '$(SOURCE_URL)/specification/planning-application-collection/specification/dataset.csv' > specification/dataset.csv
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/dataset-field.csv' > specification/dataset-field.csv
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/field.csv' > specification/field.csv
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/datatype.csv' > specification/datatype.csv
