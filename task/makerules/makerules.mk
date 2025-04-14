@@ -16,7 +16,7 @@ MAKERULES_URL=$(SOURCE_URL)makerules/main/
 endif
 
 ifeq ($(CONFIG_URL),)
-CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/main/
+CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/test-local-nature-reserve/
 endif
 
 ifeq ($(COLLECTION_NAME),)
