@@ -7,9 +7,6 @@ import functions_core as fc
 
 td = datetime.today().strftime('%Y-%m-%d')
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-repo_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
-
 db_dir = os.path.join("/tmp", "db_downloads")
 os.makedirs(db_dir, exist_ok=True)
 
