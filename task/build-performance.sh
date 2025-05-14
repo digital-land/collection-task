@@ -9,7 +9,7 @@ echo "Performance build for entry date: $ENTRY_DATE"
 echo "Running generate_provision_quality.py for entry date: $ENTRY_DATE"
 python3 src/generate_provision_quality.py
 
-OUTPUT_FILE="task/performance/provision-quality/entry-date=${ENTRY_DATE}/provision-quality.parquet"
+OUTPUT_FILE="/tmp/performance/provision-quality/entry-date=${ENTRY_DATE}/provision-quality.parquet"
 
 if [[ -n "$COLLECTION_DATASET_BUCKET_NAME" ]]; then
   if [[ -f "$OUTPUT_FILE" ]]; then

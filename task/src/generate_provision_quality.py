@@ -10,7 +10,7 @@ td = datetime.today().strftime('%Y-%m-%d')
 script_dir = os.path.dirname(os.path.abspath(__file__))
 repo_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
 
-db_dir = os.path.join(repo_root, "data", "db_downloads")
+db_dir = os.path.join("/tmp", "db_downloads")
 os.makedirs(db_dir, exist_ok=True)
 
 # download the performance db
@@ -156,7 +156,7 @@ prov_quality["start-date"] = td
 prov_quality["entry-date"] = td
 
 # output the results as a Parquet file
-output_dir = os.path.join(repo_root, "task", "performance", "provision-quality", f"entry-date={td}")
+output_dir = os.path.join("/tmp", "performance", "provision-quality", f"entry-date={td}")
 
 os.makedirs(output_dir, exist_ok=True)
 
