@@ -7,7 +7,7 @@ echo "Performance build for entry date: $ENTRY_DATE"
 
 # run the script to generate the provision-quality dataset
 echo "Running generate_provision_quality.py for entry date: $ENTRY_DATE"
-digital-land generate-provision-quality
+digital-land generate-provision-quality --specification-dir specification/
 OUTPUT_FILE="/tmp/performance/provision-quality/entry-date=${ENTRY_DATE}/provision-quality.parquet"
 
 if [[ -n "$COLLECTION_DATASET_BUCKET_NAME" ]]; then
