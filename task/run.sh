@@ -23,6 +23,9 @@ make makerules
 echo Install dependencies
 make init
 
+echo print expect.csv
+cat pipeline/expect.csv
+
 echo Run the collector
 make collect
 
