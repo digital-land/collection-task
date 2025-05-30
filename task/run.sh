@@ -17,6 +17,9 @@ if [ -z "$DATASET_JOBS" ]; then
     DATASET_JOBS=8
 fi
 
+echo print expect.csv
+cat pipeline/expect.csv
+
 echo Update makerules
 make makerules
 
