@@ -21,5 +21,5 @@ RUN pip install awscli
 RUN pip install --upgrade pip
 RUN pip3 install --upgrade -r requirements.txt
 
-CMD [".bin/run.sh"]
+CMD ["./bin/run.sh"]
 
