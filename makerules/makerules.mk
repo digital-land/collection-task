@@ -15,25 +15,17 @@ ifeq ($(MAKERULES_URL),)
 MAKERULES_URL=$(SOURCE_URL)makerules/main/
 endif
 
+ifeq ($(DATASTORE_URL),)
+DATASTORE_URL=https://files.planning.data.gov.uk/
+endif
+
 ifeq ($(CONFIG_URL),)
-CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/main/
+CONFIG_URL=$(DATASTORE_URL)config/
 endif
 
 ifeq ($(COLLECTION_NAME),)
 COLLECTION_NAME=$(shell echo "$(REPOSITORY)"|sed 's/-collection$$//')
 endif
-
-ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
-COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset
-endif
-
-ifeq ($(HOISTED_COLLECTION_DATASET_BUCKET_NAME),)
-HOISTED_COLLECTION_DATASET_BUCKET_NAME=digital-land-$(ENVIRONMENT)-collection-dataset-hoisted
-endif
-
-define dataset_url
-'https://$(COLLECTION_DATASET_BUCKET_NAME).s3.eu-west-2.amazonaws.com/$(2)-collection/dataset/$(1).sqlite3'
-endef
 
 ifeq ($(VAR_DIR),)
 VAR_DIR=var/
@@ -143,6 +135,7 @@ specification::
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/field.csv' > specification/field.csv
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/datatype.csv' > specification/datatype.csv
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/prefix.csv' > specification/prefix.csv
+	curl -qfsL '$(SOURCE_URL)/specification/main/specification/provision-rule.csv' > specification/provision-rule.csv
 	# deprecated ..
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/pipeline.csv' > specification/pipeline.csv
 	curl -qfsL '$(SOURCE_URL)/specification/main/specification/dataset-schema.csv' > specification/dataset-schema.csv
@@ -156,7 +149,11 @@ endif
 # local copy of organsiation datapackage
 $(CACHE_DIR)organisation.csv:
 	@mkdir -p $(CACHE_DIR)
-	curl -qfs "https://files.planning.data.gov.uk/organisation-collection/dataset/organisation.csv" > $(CACHE_DIR)organisation.csv
+ifneq ($(COLLECTION_DATASET_BUCKET_NAME),)
+	aws s3 cp s3://$(COLLECTION_DATASET_BUCKET_NAME)/organisation-collection/dataset/organisation.csv $(CACHE_DIR)organisation.csv
+else
+	curl -qfs "$(DATASTORE_URL)organisation-collection/dataset/organisation.csv" > $(CACHE_DIR)organisation.csv
+endif
 
 init:: config
 
@@ -168,12 +165,3 @@ commit-makerules::
 
 commit-collection::
 	@:
-
-state.json::
-	digital-land save-state --specification-dir=specification --collection-dir=$(COLLECTION_DIR) --pipeline-dir=$(PIPELINE_DIR) --output-path=state.json
-
-save-state:: state.json
-	aws s3 cp state.json s3://$(COLLECTION_DATASET_BUCKET_NAME)/state.json --no-progress
-
-load-state::
-	aws s3 cp s3://$(COLLECTION_DATASET_BUCKET_NAME)/state.json state.json --no-progress || echo state.json not found in s3 bucket $(COLLECTION_DATASET_BUCKET_NAME)

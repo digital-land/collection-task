@@ -1,14 +1,25 @@
 /task/collection
+/collection
 /task/pipeline
+/pipeline
 /task/dataset
+/dataset
 /task/transformed
+/transformed
 /task/var
+/var
 /task/flattened
+/flattened
 /task/.venv
 /task/expectations
+/expectations
 /task/metadata.json
+/metadata.json
 /task/specification
+/specification
 /task/issue
-
+/issue
+/performance
+/log
 # python
 .venv

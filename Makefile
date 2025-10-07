@@ -1,3 +1,7 @@
+ifeq ($(COLLECTION_NAME),)
+$(error Environment variable COLLECTION_NAME is not set)
+endif
+
 .PHONY: \
 	compose-up \
 	compose-down \
@@ -12,15 +16,24 @@ compose-down::
 build-image::
 	docker build -t collection-task:latest .
 
-ifeq ($(COLLECTION_NAME),)
-$(error Environment variable COLLECTION_NAME is not set)
-endif
-
 REPOSITORY=$(COLLECTION_NAME)-collection
 
 BRANCH=not-a-real-branch
+
+# useful parameters to alter for development
+# CONFIG_URL allows you to change where all config is downloaded from it's default is the files cdn in production
+# CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/refs/heads/msj/add-D1342-bnd/
+
+
 
 include makerules/makerules.mk
 include makerules/development.mk
 include makerules/collection.mk
 include makerules/pipeline.mk
+
+make clean::
+	make clobber
+	rm -rf performance
+	rm -rf collection
+	rm -rf specification
+	rm -rf log
