@@ -18,7 +18,7 @@ services:
   task:
     build: .
     environment:
-      COLLECTION_NAME: ancient-woodland
+      COLLECTION_NAME: ${COLLECTION_NAME}
       COLLECTION_DATASET_BUCKET_NAME: local-collection-data
       HOISTED_COLLECTION_DATASET_BUCKET_NAME: local-collection-data
       # INCREMENTAL_LOADING_OVERRIDE: true
