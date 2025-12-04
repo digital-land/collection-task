@@ -23,6 +23,9 @@ make makerules
 echo Install dependencies
 make init
 
+echo Disk space after initialising:
+df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
+
 echo Run the collector
 make collect
 
