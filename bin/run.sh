@@ -68,6 +68,12 @@ else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so transformed files not pushed to s3"
 fi
 
+echo Remove uneeded files collection repo
+rm -rf collection/resource
+
+echo Disk space after removing unneeded files:
+df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
+
 echo Build datasets from the transformed files
 gmake dataset -j $DATASET_JOBS
 
