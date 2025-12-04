@@ -32,6 +32,9 @@ else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
 fi
 
+echo Disk space after collection:
+df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
+
 echo Build the collection database
 make collection
 
@@ -54,6 +57,10 @@ fi
 echo Transform collected files
 gmake transformed -j $TRANSFORMED_JOBS
 
+echo Disk space after transformation:
+df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
+
+
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save transformed files to $ENVIRONMENT S3
     make save-transformed
@@ -63,6 +70,10 @@ fi
 
 echo Build datasets from the transformed files
 gmake dataset -j $DATASET_JOBS
+
+echo Disk space after assembling dataset sqlite:
+df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
+
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo Save datasets and expecations to $ENVIRONMENT S3
