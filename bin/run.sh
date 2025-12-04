@@ -23,6 +23,9 @@ make makerules
 echo Install dependencies
 make init
 
+echo Disk space after initialising:
+df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
+
 echo Run the collector
 make collect
 
@@ -40,6 +43,10 @@ make collection
 
 echo Detect new resources that have been downloaded
 make detect-new-resources
+
+echo create new state
+rm -f state.json
+make state.json
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
@@ -68,6 +75,12 @@ else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so transformed files not pushed to s3"
 fi
 
+echo Remove uneeded files collection repo
+rm -rf collection/resource
+
+echo Disk space after removing unneeded files:
+df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
+
 echo Build datasets from the transformed files
 gmake dataset -j $DATASET_JOBS
 
@@ -80,9 +93,6 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-dataset
     make save-expectations
     make save-performance
-
-    rm -f state.json
-    make state.json
     make save-state
 else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
