@@ -44,6 +44,10 @@ make collection
 echo Detect new resources that have been downloaded
 make detect-new-resources
 
+echo create new state
+rm -f state.json
+make state.json
+
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
     make save-resources
@@ -89,9 +93,6 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-dataset
     make save-expectations
     make save-performance
-
-    rm -f state.json
-    make state.json
     make save-state
 else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
