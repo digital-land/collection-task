@@ -1,1 +1,2 @@
--e git+https://github.com/digital-land/pipeline.git@main#egg=digital-land
+-e git+https://github.com/digital-land/pipeline.git@feat/transform_count#egg=digital-land
+tqdm
