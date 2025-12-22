@@ -32,19 +32,6 @@ make collect
 echo Disk space after coll:
 df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
 
-<<<<<<< HEAD
-=======
-echo Build the collection database
-make collection
-
-echo Detect new resources that have been downloaded
-make detect-new-resources
-
-echo create new state
-rm -f state.json
-make state.json
-
->>>>>>> main
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
     make save-resources
@@ -98,10 +85,6 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-dataset
     make save-expectations
     make save-performance
-<<<<<<< HEAD
-=======
-    make save-state
->>>>>>> main
 else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
 fi
