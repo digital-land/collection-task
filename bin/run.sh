@@ -29,24 +29,8 @@ df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
 echo Run the collector
 make collect
 
-if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    make load-state
-else
-    echo "No COLLECTION_DATASET_BUCKET_NAME defined to get previous state.json"
-fi
-
-echo Disk space after collection:
+echo Disk space after coll:
 df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
-
-echo Build the collection database
-make collection
-
-echo Detect new resources that have been downloaded
-make detect-new-resources
-
-echo create new state
-rm -f state.json
-make state.json
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Saving logs and resources to $COLLECTION_DATASET_BUCKET_NAME"
@@ -56,13 +40,21 @@ else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so collection files not pushed to s3"
 fi
 
+echo Build the collection database
+make collection
+
+echo Create state
+make state.json
+
+
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo Push collection database to $ENVIRONMENT S3
+    echo Push collection database and state to $ENVIRONMENT S3
     make save-collection
+    make save-state
 fi
 
 echo Transform collected files
-gmake transformed -j $TRANSFORMED_JOBS
+make transformed -j $TRANSFORMED_JOBS
 
 echo Disk space after transformation:
 df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
@@ -93,7 +85,6 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     make save-dataset
     make save-expectations
     make save-performance
-    make save-state
 else
     echo "No COLLECTION_DATASET_BUCKET_NAME defined so dataset and expectation files not pushed to s3"
 fi
