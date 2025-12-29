@@ -23,6 +23,7 @@ BRANCH=not-a-real-branch
 # useful parameters to alter for development
 # CONFIG_URL allows you to change where all config is downloaded from it's default is the files cdn in production
 # CONFIG_URL=https://raw.githubusercontent.com/digital-land/config/refs/heads/msj/add-D1342-bnd/
+# MAKERULES_URL=https://raw.githubusercontent.com/digital-land/makerules/feat/change_state/
 
 
 
