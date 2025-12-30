@@ -7,9 +7,10 @@ TODAY=$(date +%Y-%m-%d)
 echo "Running assemble for $COLLECTION_NAME on $TODAY"
 
 # Check required environment variables
+# Either COLLECTION_DATASET_BUCKET_NAME or DATASTORE_URL must be set
 if [ -z "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo "Error: COLLECTION_DATASET_BUCKET_NAME must be set"
-    exit 1
+    DATASTORE_URL=${DATASTORE_URL:-"https://files.planning.data.gov.uk/"}
+    echo " no COLLECTION_DATASET_BUCKET_NAME set so using $DATASTORE_URL"
 fi
 
 if [ -z "$COLLECTION_DIR" ]; then
@@ -42,12 +43,24 @@ make init
 echo "Step 3: Building collection database..."
 make collection
 
-# Step 4: Download ALL transformed resources from S3
+# Step 4: Download ALL transformed resources from S3 or HTTP(S)
 # Note: We need all transformed files to build complete datasets, no offset/limit
-echo "Step 4: Downloading all transformed resources from S3..."
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo "Step 4: Downloading all transformed resources from S3..."
+    SOURCE_TYPE="S3 bucket: $COLLECTION_DATASET_BUCKET_NAME"
+else
+    echo "Step 4: Downloading all transformed resources from HTTP(S)..."
+    SOURCE_TYPE="Base URL: $DATASTORE_URL"
+fi
 
 # Build the download command
-DOWNLOAD_CMD="python bin/download_transformed.py --collection-dir $COLLECTION_DIR --bucket $COLLECTION_DATASET_BUCKET_NAME"
+DOWNLOAD_CMD="python bin/download_transformed.py --collection-dir $COLLECTION_DIR --collection-name $COLLECTION_NAME"
+
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    DOWNLOAD_CMD="$DOWNLOAD_CMD --bucket $COLLECTION_DATASET_BUCKET_NAME"
+else
+    DOWNLOAD_CMD="$DOWNLOAD_CMD --base-url $DATASTORE_URL"
+fi
 
 if [ -n "$DOWNLOAD_THREADS" ]; then
     DOWNLOAD_CMD="$DOWNLOAD_CMD --max-threads $DOWNLOAD_THREADS"
@@ -58,6 +71,7 @@ if [ -n "$VERBOSE" ]; then
     DOWNLOAD_CMD="$DOWNLOAD_CMD --verbose"
 fi
 
+echo "Source: $SOURCE_TYPE"
 echo "Command: $DOWNLOAD_CMD"
 eval $DOWNLOAD_CMD
 
@@ -78,21 +92,28 @@ gmake dataset -j $DATASET_JOBS
 echo "Disk space after assembling dataset sqlite:"
 df -h / | tail -1 | awk '{print "Available: " $4 " / Total: " $2}'
 
-# Step 7: Save outputs to S3
-echo "Step 7: Saving outputs to S3 bucket: $COLLECTION_DATASET_BUCKET_NAME"
+# Step 7: Save outputs to S3 (only if using S3 bucket)
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo "Step 7: Saving outputs to S3 bucket: $COLLECTION_DATASET_BUCKET_NAME"
 
-echo "Saving datasets..."
-make save-dataset
+    echo "Saving datasets..."
+    make save-dataset
 
-echo "Saving expectations..."
-make save-expectations
+    echo "Saving expectations..."
+    make save-expectations
 
-echo "Saving performance metrics..."
-make save-performance
+    echo "Saving performance metrics..."
+    make save-performance
 
-echo "Saving state..."
-make save-state
+    echo "Saving state..."
+    make save-state
 
-echo "All outputs saved to S3 successfully"
+    echo "All outputs saved to S3 successfully"
+else
+    echo "Step 7: Skipping S3 upload (no bucket configured)"
+    echo "Outputs remain in local directories:"
+    echo "  - Datasets: $DATASET_DIR"
+    echo "  - Flattened: $FLATTENED_DIR"
+fi
 
 echo "Assemble complete!"

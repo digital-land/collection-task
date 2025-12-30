@@ -1,18 +1,20 @@
 import logging
 import sys
 import click
-import subprocess
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 
 from digital_land.collection import Collection
+from digital_land.pipeline import Pipeline
+from digital_land.specification import Specification
+from digital_land.commands import pipeline_run
 
 logger = logging.getLogger(__name__)
 
 
 def process_single_resource(args):
-    """Process a single resource through the digital-land pipeline.
+    """Process a single resource through the digital-land pipeline using Python library directly.
 
     Args:
         args: Tuple of (old_resource, dataset, resource_path, endpoints, organisations, entry_date, config)
@@ -43,49 +45,39 @@ def process_single_resource(args):
         # Build output path using old_resource (original resource identifier)
         output_path = transformed_dir / f"{old_resource}.csv"
 
-        # Build the digital-land pipeline command
-        cmd = [
-            "digital-land",
-            "--dataset", dataset,
-            "--pipeline-dir", config['pipeline_dir'],
-            "pipeline",
-            "--endpoints", endpoints,
-            "--organisations", organisations,
-            "--entry-date", entry_date,
-            "--issue-dir", str(issue_dir),
-            "--column-field-dir", str(column_field_dir),
-            "--dataset-resource-dir", str(dataset_resource_dir),
-            "--converted-resource-dir", str(converted_resource_dir),
-            "--config-path", config['config_path'],
-            "--organisation-path", config['organisation_path'],
-            resource_path,
-            str(output_path)
-        ]
+        # Initialize pipeline and specification objects
+        pipeline = Pipeline(path=config['pipeline_dir'], dataset=dataset)
+        specification = Specification(config.get('specification_dir', 'specification/'))
 
-        # Add optional resource parameter if provided (for redirected resources)
-        if config.get('resource'):
-            cmd.insert(cmd.index("pipeline") + 1, "--resource")
-            cmd.insert(cmd.index("pipeline") + 2, config['resource'])
+        # Parse endpoints and organisations (convert space-separated strings to lists)
+        endpoints_list = endpoints.split() if endpoints else []
+        organisations_list = organisations.split() if organisations else []
 
-        # Run the command
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=config.get('timeout', 300)  # 5 minute default timeout
+        # Call the pipeline_run function directly instead of subprocess
+        pipeline_run(
+            dataset=dataset,
+            pipeline=pipeline,
+            specification=specification,
+            input_path=str(resource_path),
+            output_path=output_path,
+            collection_dir=config.get('collection_dir', 'collection/'),
+            issue_dir=str(issue_dir),
+            operational_issue_dir=str(operational_issue_dir),
+            column_field_dir=str(column_field_dir),
+            dataset_resource_dir=str(dataset_resource_dir),
+            converted_resource_dir=str(converted_resource_dir),
+            organisation_path=config['organisation_path'],
+            config_path=config['config_path'],
+            endpoints=endpoints_list,
+            organisations=organisations_list,
+            entry_date=entry_date,
+            cache_dir=config.get('cache_dir', 'var/cache'),
+            resource=config.get('resource'),  # For redirected resources
+            output_log_dir=str(output_log_dir),
         )
-
-        if result.returncode != 0:
-            error_msg = f"Command failed with return code {result.returncode}: {result.stderr}"
-            logger.error(f"Error processing {old_resource} for dataset {dataset}: {error_msg}")
-            return (old_resource, False, error_msg)
 
         return (old_resource, True, None)
 
-    except subprocess.TimeoutExpired:
-        error_msg = f"Processing timed out after {config.get('timeout', 300)} seconds"
-        logger.error(f"Error processing {old_resource} for dataset {dataset}: {error_msg}")
-        return (old_resource, False, error_msg)
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Error processing {old_resource} for dataset {dataset}: {error_msg}")
@@ -173,6 +165,8 @@ def process_resources(
 
             config = {
                 'pipeline_dir': pipeline_dir,
+                'cache_dir': cache_dir,
+                'collection_dir': collection_dir,
                 'transformed_dir': transformed_dir,
                 'issue_dir': issue_dir,
                 'operational_issue_dir': operational_issue_dir,

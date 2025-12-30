@@ -38,3 +38,4 @@ make clean::
 	rm -rf collection
 	rm -rf specification
 	rm -rf log
+	rm -rf state.json

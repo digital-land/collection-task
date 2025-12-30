@@ -108,8 +108,6 @@ fi
 echo "Command: $TRANSFORM_CMD"
 eval $TRANSFORM_CMD
 
-echo "Transform complete!"
-
 # Step 6: Save outputs to S3 if bucket is configured
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Step 6: Saving outputs to S3 bucket: $COLLECTION_DATASET_BUCKET_NAME"
