@@ -118,6 +118,7 @@ def download_files(url_map, max_threads=4):
 
 def download_transformed(
     dataset_resource_map,
+    collection=None,
     bucket=None,
     base_url=None,
     collection_name=None,
@@ -136,6 +137,7 @@ def download_transformed(
 
     Args:
         dataset_resource_map: Dictionary mapping datasets to lists of resources
+        collection: Collection object to access old_resource data
         bucket: S3 bucket name (optional if base_url provided)
         base_url: Base URL for HTTP(S) downloads (optional if bucket provided)
         collection_name: Collection name (e.g., 'brownfield-land')
@@ -158,6 +160,13 @@ def download_transformed(
     if bucket and not HAS_BOTO3:
         raise ImportError("boto3 is required for S3 downloads. Install it with: pip install boto3")
 
+    # Build set of retired resources (status 410) from old_resource.csv
+    retired_resources = set()
+    if collection and hasattr(collection, 'old_resource'):
+        for entry in collection.old_resource.entries:
+            if entry.get("status") == "410":
+                retired_resources.add(entry["old-resource"])
+
     # Build resource list with offset/limit
     sorted_resource_list = []
     for key in sorted(dataset_resource_map.keys()):
@@ -179,6 +188,11 @@ def download_transformed(
     url_map = {}
 
     for resource in filtered_resources:
+        # Skip retired resources (status 410)
+        if resource in retired_resources:
+            logger.info(f"Skipping retired resource (status 410): {resource}")
+            continue
+
         dataset = resource_to_dataset.get(resource)
         if not dataset:
             logger.warning(f"Could not find dataset for resource {resource}, skipping")
@@ -258,6 +272,7 @@ def download_transformed_resources(
 
     download_transformed(
         dataset_resource_map=dataset_resource_map,
+        collection=collection,
         bucket=bucket,
         base_url=base_url,
         collection_name=collection_name,
