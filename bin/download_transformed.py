@@ -118,9 +118,11 @@ def download_files(url_map, max_threads=4):
 
 def download_transformed(
     dataset_resource_map,
+    collection=None,
     bucket=None,
     base_url=None,
     collection_name=None,
+    dataset=None,
     transformed_dir="transformed/",
     issue_dir="issue/",
     column_field_dir="var/column-field/",
@@ -136,9 +138,11 @@ def download_transformed(
 
     Args:
         dataset_resource_map: Dictionary mapping datasets to lists of resources
+        collection: Collection object to access old_resource data
         bucket: S3 bucket name (optional if base_url provided)
         base_url: Base URL for HTTP(S) downloads (optional if bucket provided)
         collection_name: Collection name (e.g., 'brownfield-land')
+        dataset: Optional dataset name to filter downloads (only download resources for this dataset)
         transformed_dir: Local directory for transformed files
         issue_dir: Local directory for issue files
         column_field_dir: Local directory for column field mappings
@@ -158,10 +162,26 @@ def download_transformed(
     if bucket and not HAS_BOTO3:
         raise ImportError("boto3 is required for S3 downloads. Install it with: pip install boto3")
 
+    # Build set of retired resources (status 410) from old_resource.csv
+    retired_resources = set()
+    if collection and hasattr(collection, 'old_resource'):
+        for entry in collection.old_resource.entries:
+            if entry.get("status") == "410":
+                retired_resources.add(entry["old-resource"])
+
+    # Filter dataset_resource_map if specific dataset is requested
+    if dataset:
+        if dataset not in dataset_resource_map:
+            raise ValueError(f"Dataset '{dataset}' not found in dataset_resource_map")
+        filtered_dataset_resource_map = {dataset: dataset_resource_map[dataset]}
+        logger.info(f"Filtering downloads to dataset: {dataset}")
+    else:
+        filtered_dataset_resource_map = dataset_resource_map
+
     # Build resource list with offset/limit
     sorted_resource_list = []
-    for key in sorted(dataset_resource_map.keys()):
-        sorted_resource_list.extend(sorted(dataset_resource_map[key]))
+    for key in sorted(filtered_dataset_resource_map.keys()):
+        sorted_resource_list.extend(sorted(filtered_dataset_resource_map[key]))
 
     filtered_resources = sorted_resource_list
     if transformation_offset is not None:
@@ -179,6 +199,11 @@ def download_transformed(
     url_map = {}
 
     for resource in filtered_resources:
+        # Skip retired resources (status 410)
+        if resource in retired_resources:
+            logger.info(f"Skipping retired resource (status 410): {resource}")
+            continue
+
         dataset = resource_to_dataset.get(resource)
         if not dataset:
             logger.warning(f"Could not find dataset for resource {resource}, skipping")
@@ -224,6 +249,7 @@ def download_transformed_resources(
     bucket: str = None,
     base_url: str = None,
     collection_name: str = None,
+    dataset: str = None,
     transformed_dir: str = "transformed/",
     issue_dir: str = "issue/",
     column_field_dir: str = "var/column-field/",
@@ -240,6 +266,7 @@ def download_transformed_resources(
         bucket: S3 bucket name (optional if base_url provided)
         base_url: Base URL for HTTP(S) downloads (optional if bucket provided)
         collection_name: Collection name (e.g., 'brownfield-land')
+        dataset: Optional dataset name to filter downloads
         transformed_dir: Local directory for transformed files
         issue_dir: Local directory for issue files
         column_field_dir: Local directory for column field mappings
@@ -258,9 +285,11 @@ def download_transformed_resources(
 
     download_transformed(
         dataset_resource_map=dataset_resource_map,
+        collection=collection,
         bucket=bucket,
         base_url=base_url,
         collection_name=collection_name,
+        dataset=dataset,
         transformed_dir=transformed_dir,
         issue_dir=issue_dir,
         column_field_dir=column_field_dir,
@@ -293,6 +322,11 @@ def download_transformed_resources(
     "--collection-name",
     required=True,
     help="Collection name (e.g., 'brownfield-land')"
+)
+@click.option(
+    "--dataset",
+    default=None,
+    help="Optional dataset name to filter downloads (e.g., 'brownfield-land')"
 )
 @click.option(
     "--transformed-dir",
@@ -347,6 +381,7 @@ def run_command(
     bucket,
     base_url,
     collection_name,
+    dataset,
     transformed_dir,
     issue_dir,
     column_field_dir,
@@ -378,6 +413,7 @@ def run_command(
             bucket=bucket,
             base_url=base_url,
             collection_name=collection_name,
+            dataset=dataset,
             transformed_dir=transformed_dir,
             issue_dir=issue_dir,
             column_field_dir=column_field_dir,
