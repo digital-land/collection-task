@@ -95,6 +95,7 @@ def process_resources(
     column_field_dir="var/column-field/",
     dataset_resource_dir="var/dataset-resource/",
     converted_resource_dir="var/converted-resource/",
+    dataset=None,
     offset=None,
     limit=None,
     max_workers=None
@@ -112,6 +113,7 @@ def process_resources(
         column_field_dir: Path to the column field directory
         dataset_resource_dir: Path to the dataset resource directory
         converted_resource_dir: Path to the converted resource directory
+        dataset: Optional dataset filter - only process resources from this dataset
         offset: Optional offset for filtering resources
         limit: Optional limit for filtering resources
         max_workers: Number of worker processes (defaults to CPU count)
@@ -126,29 +128,16 @@ def process_resources(
     for entry in collection.old_resource.entries:
         redirect[entry["old-resource"]] = entry["resource"]
 
-    # Get sorted list of all resources
-    sorted_resource_list = []
-    for key in sorted(dataset_resource_map.keys()):
-        sorted_resource_list.extend(sorted(dataset_resource_map[key]))
+    # Build task list first (dataset + resource pairs)
+    # This preserves duplicates where a resource is used in multiple datasets
+    datasets_to_process = [dataset] if dataset else sorted(dataset_resource_map.keys())
 
-    # Apply offset and limit
-    filtered_resources = sorted_resource_list
-    if offset is not None:
-        filtered_resources = filtered_resources[offset:]
-    if limit is not None:
-        filtered_resources = filtered_resources[:limit]
-
-    resources_to_process = list(set(filtered_resources))
-
-    logger.info(f"Processing {len(resources_to_process)} unique resources across {len(dataset_resource_map)} datasets")
-
-    # Build task list
     tasks = []
-    for dataset in sorted(dataset_resource_map.keys()):
-        for old_resource in sorted(dataset_resource_map[dataset]):
-            if old_resource not in resources_to_process:
-                continue
+    for ds in sorted(datasets_to_process):
+        if ds not in dataset_resource_map:
+            continue
 
+        for old_resource in sorted(dataset_resource_map[ds]):
             # Get the actual resource to process (may be redirected)
             resource = redirect.get(old_resource, old_resource)
 
@@ -182,10 +171,28 @@ def process_resources(
             if resource != old_resource:
                 config['resource'] = old_resource
 
-            tasks.append((old_resource, dataset, resource_path, endpoints, organisations, entry_date, config))
+            tasks.append((old_resource, ds, resource_path, endpoints, organisations, entry_date, config))
+
+    # Store total count before applying offset/limit
+    total_tasks = len(tasks)
+
+    # Apply offset and limit to the actual transformation tasks
+    if offset is not None:
+        if offset >= total_tasks:
+            error_msg = f"Offset {offset} is beyond the total number of transformation tasks ({total_tasks})"
+            logger.error(error_msg)
+            if dataset:
+                logger.error(f"Note: Filtering by dataset '{dataset}'")
+            raise ValueError(error_msg)
+        tasks = tasks[offset:]
+
+    if limit is not None:
+        tasks = tasks[:limit]
+
+    logger.info(f"Processing {len(tasks)} transformation tasks (out of {total_tasks} total)")
 
     if not tasks:
-        logger.warning("No resources to process")
+        logger.warning("No transformation tasks to process after applying filters")
         return
 
     # Determine number of workers
@@ -210,14 +217,25 @@ def process_resources(
                 desc="Processing resources"
             ))
         else:
-            # Non-interactive mode with periodic logging
+            # Non-interactive mode with progress logging at 10% intervals
             results = []
-            logger.info(f"Starting processing of {len(tasks)} resources...")
+            total_tasks = len(tasks)
+            logger.info(f"Starting processing of {total_tasks} transformation tasks...")
+
+            # Calculate 10% interval (at least 1, at most total_tasks)
+            progress_interval = max(1, total_tasks // 10)
+            last_logged_percent = 0
+
             for i, result in enumerate(pool.imap(process_single_resource, tasks), 1):
                 results.append(result)
-                if i % 10 == 0:
-                    logger.info(f"Processed {i}/{len(tasks)} resources")
-            logger.info(f"Completed processing of {len(tasks)} resources")
+
+                # Log at 10% intervals
+                current_percent = (i * 100) // total_tasks
+                if current_percent >= last_logged_percent + 10 or i == total_tasks:
+                    logger.info(f"Progress: {i}/{total_tasks} tasks ({current_percent}%)")
+                    last_logged_percent = current_percent
+
+            logger.info(f"Completed processing of {total_tasks} transformation tasks")
 
     # Collect results
     for resource, success, error_msg in results:
@@ -291,6 +309,11 @@ def process_resources(
     help="Path to the converted resource directory"
 )
 @click.option(
+    "--dataset",
+    default=None,
+    help="Filter resources to only this dataset"
+)
+@click.option(
     "--offset",
     default=None,
     type=int,
@@ -309,9 +332,14 @@ def process_resources(
     help="Number of worker processes (defaults to CPU count)"
 )
 @click.option(
-    "--verbose",
+    "--quiet",
     is_flag=True,
-    help="Enable verbose logging"
+    help="Suppress progress output (only show warnings and errors)"
+)
+@click.option(
+    "--debug",
+    is_flag=True,
+    help="Enable debug logging"
 )
 def run_command(
     collection_dir,
@@ -324,40 +352,56 @@ def run_command(
     column_field_dir,
     dataset_resource_dir,
     converted_resource_dir,
+    dataset,
     offset,
     limit,
     max_workers,
-    verbose
+    quiet,
+    debug
 ):
     """Process resources using multiprocessing instead of make."""
     # Configure logging
-    if verbose:
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
-    else:
+    if debug:
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s: %(message)s')
+    elif quiet:
         logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s: %(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
 
-    # Process resources
-    successful, failed, errors = process_resources(
-        collection_dir=collection_dir,
-        pipeline_dir=pipeline_dir,
-        cache_dir=cache_dir,
-        transformed_dir=transformed_dir,
-        issue_dir=issue_dir,
-        operational_issue_dir=operational_issue_dir,
-        output_log_dir=output_log_dir,
-        column_field_dir=column_field_dir,
-        dataset_resource_dir=dataset_resource_dir,
-        converted_resource_dir=converted_resource_dir,
-        offset=offset,
-        limit=limit,
-        max_workers=max_workers
-    )
+    try:
+        # Process resources
+        result = process_resources(
+            collection_dir=collection_dir,
+            pipeline_dir=pipeline_dir,
+            cache_dir=cache_dir,
+            transformed_dir=transformed_dir,
+            issue_dir=issue_dir,
+            operational_issue_dir=operational_issue_dir,
+            output_log_dir=output_log_dir,
+            column_field_dir=column_field_dir,
+            dataset_resource_dir=dataset_resource_dir,
+            converted_resource_dir=converted_resource_dir,
+            dataset=dataset,
+            offset=offset,
+            limit=limit,
+            max_workers=max_workers
+        )
 
-    click.echo(f"\nProcessing complete!")
-    click.echo(f"Successful: {successful}")
-    click.echo(f"Failed: {failed}")
+        # Handle case where no tasks were processed
+        if result is None:
+            click.echo("\nNo transformation tasks to process")
+            sys.exit(0)
 
-    if failed > 0:
+        successful, failed, errors = result
+
+        click.echo(f"\nProcessing complete!")
+        click.echo(f"Successful: {successful}")
+        click.echo(f"Failed: {failed}")
+
+        if failed > 0:
+            sys.exit(1)
+    except ValueError as e:
+        click.echo(f"\nError: {e}", err=True)
         sys.exit(1)
 
 

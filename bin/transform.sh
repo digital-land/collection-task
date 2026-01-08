@@ -15,6 +15,7 @@ fi
 # Optional environment variables with defaults (matching makefile conventions)
 COLLECTION_DATASET_BUCKET_NAME=${COLLECTION_DATASET_BUCKET_NAME:-""}
 DATASTORE_URL=${DATASTORE_URL:-"https://files.planning.data.gov.uk/"}
+DATASET=${DATASET:-""}
 TRANSFORMATION_OFFSET=${TRANSFORMATION_OFFSET:-""}
 TRANSFORMATION_LIMIT=${TRANSFORMATION_LIMIT:-""}
 DOWNLOAD_THREADS=${DOWNLOAD_THREADS:-4}
@@ -53,6 +54,10 @@ else
     exit 1
 fi
 
+if [ -n "$DATASET" ]; then
+    DOWNLOAD_CMD="$DOWNLOAD_CMD --dataset $DATASET"
+fi
+
 if [ -n "$TRANSFORMATION_OFFSET" ]; then
     DOWNLOAD_CMD="$DOWNLOAD_CMD --offset $TRANSFORMATION_OFFSET"
 fi
@@ -85,6 +90,11 @@ TRANSFORM_CMD="python bin/transform_resources.py --collection-dir $COLLECTION_DI
 TRANSFORM_CMD="$TRANSFORM_CMD --pipeline-dir $PIPELINE_DIR"
 TRANSFORM_CMD="$TRANSFORM_CMD --cache-dir $CACHE_DIR"
 TRANSFORM_CMD="$TRANSFORM_CMD --transformed-dir $TRANSFORMED_DIR"
+
+# Add dataset filter if specified
+if [ -n "$DATASET" ]; then
+    TRANSFORM_CMD="$TRANSFORM_CMD --dataset $DATASET"
+fi
 
 # Add offset and limit if specified
 if [ -n "$TRANSFORMATION_OFFSET" ]; then
