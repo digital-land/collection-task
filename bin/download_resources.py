@@ -81,20 +81,26 @@ def download_urls(url_map, max_threads=4):
         }
         results = []
         errors = []
+        total_files = len(futures)
 
         # Use tqdm for interactive terminals, plain iteration for cloud/non-interactive
         if use_progress_bar:
             iterator = tqdm(futures, desc="Downloading files")
         else:
             iterator = futures
-            logger.info(f"Starting download of {len(futures)} files...")
+            logger.info(f"Starting download of {total_files} files...")
+
+        last_logged_percent = 0
 
         for i, future in enumerate(iterator, 1):
             try:
                 results.append(future.result())
-                # Log progress periodically in non-interactive mode
-                if not use_progress_bar and i % 10 == 0:
-                    logger.info(f"Downloaded {i}/{len(futures)} files")
+                # Log progress at 10% intervals in non-interactive mode
+                if not use_progress_bar:
+                    current_percent = (i * 100) // total_files
+                    if current_percent >= last_logged_percent + 10 or i == total_files:
+                        logger.info(f"Progress: {i}/{total_files} files ({current_percent}%)")
+                        last_logged_percent = current_percent
             except Exception as e:
                 url = futures[future]
                 error_msg = f"Failed to download {url}: {e}"
@@ -102,7 +108,7 @@ def download_urls(url_map, max_threads=4):
                 errors.append(error_msg)
 
         if not use_progress_bar:
-            logger.info(f"Completed download of {len(futures)} files")
+            logger.info(f"Completed download of {total_files} files")
 
         # Raise an error if any downloads failed
         if errors:
@@ -112,7 +118,7 @@ def download_urls(url_map, max_threads=4):
 
         return results
 
-def download_resources(collection, collection_dir: str, bucket=None, base_url=None, collection_name=None, transformaiton_offset=None, transformation_limit=None, max_threads=4) -> None:
+def download_resources(collection, collection_dir: str, bucket=None, base_url=None, collection_name=None, dataset=None, transformaiton_offset=None, transformation_limit=None, max_threads=4) -> None:
     """Download resources for a collection., can limit and offset based on how many. transformation
     rresource numberr may differ to
     Args:
@@ -121,6 +127,7 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
         bucket (str, optional): S3 bucket name to download from. If provided, will construct s3:// URLs.
         base_url (str, optional): Base URL for HTTP downloads (e.g., https://files.planning.data.gov.uk/).
         collection_name (str, optional): Collection name for URL construction. If not provided, will be inferred.
+        dataset (str, optional): Filter resources to only this dataset.
         transformaiton_offset (int, optional): Offset for filtering resources.
         transformation_limit (int, optional): Limit for filtering resources.
         max_threads (int, optional): Maximum number of concurrent download threads. Defaults to 4.
@@ -145,18 +152,36 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     for entry in collection.old_resource.entries:
         redirect[entry["old-resource"]] = entry["resource"]
 
-    #get a fill list in order of dataset and resource hash to apply offset. and limit to
-    sorted_resource_list = []
-    for key in sorted(dataset_resource_map.keys()):
-        sorted_resource_list.extend(sorted(dataset_resource_map[key]))
+    # Build list of (dataset, resource) pairs in order
+    # This preserves duplicates where a resource is used in multiple datasets
+    datasets_to_process = [dataset] if dataset else sorted(dataset_resource_map.keys())
 
-    filtered_resources = sorted_resource_list
+    dataset_resource_pairs = []
+    for key in sorted(datasets_to_process):
+        if key in dataset_resource_map:
+            for res in sorted(dataset_resource_map[key]):
+                dataset_resource_pairs.append((key, res))
+
+    # Store total count before applying offset/limit
+    total_pairs = len(dataset_resource_pairs)
+
+    # Apply offset and limit to the actual download tasks
     if transformaiton_offset is not None:
-        filtered_resources = filtered_resources[transformaiton_offset:]
-    if transformation_limit is not None:
-        filtered_resources = filtered_resources[:transformation_limit]
+        if transformaiton_offset >= total_pairs:
+            error_msg = f"Offset {transformaiton_offset} is beyond the total number of transformation tasks ({total_pairs})"
+            logger.error(error_msg)
+            if dataset:
+                logger.error(f"Note: Filtering by dataset '{dataset}'")
+            raise ValueError(error_msg)
+        dataset_resource_pairs = dataset_resource_pairs[transformaiton_offset:]
 
-    resources_to_download = list(set(filtered_resources))
+    if transformation_limit is not None:
+        dataset_resource_pairs = dataset_resource_pairs[:transformation_limit]
+
+    # Extract unique resources to download (a resource only needs to be downloaded once)
+    resources_to_download = list(set([res for _, res in dataset_resource_pairs]))
+
+    logger.info(f"Downloading resources for {len(dataset_resource_pairs)} transformation tasks (out of {total_pairs} total)")
 
     # Build download map with URLs and output paths
     download_map = {}
@@ -215,6 +240,11 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     help="Collection name (e.g., 'brownfield-land'). If not provided, will be inferred from COLLECTION_NAME env var."
 )
 @click.option(
+    "--dataset",
+    default=None,
+    help="Filter resources to only this dataset"
+)
+@click.option(
     "--offset",
     default=None,
     type=int,
@@ -233,20 +263,27 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     help="Maximum number of concurrent download threads"
 )
 @click.option(
-    "--verbose",
+    "--quiet",
     is_flag=True,
-    help="Enable verbose logging"
+    help="Suppress progress output (only show warnings and errors)"
 )
-def run_command(collection_dir, bucket, base_url, collection_name, offset, limit, max_threads, verbose):
+@click.option(
+    "--debug",
+    is_flag=True,
+    help="Enable debug logging"
+)
+def run_command(collection_dir, bucket, base_url, collection_name, dataset, offset, limit, max_threads, quiet, debug):
     """Download resources for a collection from S3 or HTTP(S) URLs.
 
     Either --bucket or --base-url must be provided.
     """
     # Configure logging
-    if verbose:
-        logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-    else:
+    if debug:
+        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+    elif quiet:
         logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
+    else:
+        logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     # Get collection name from parameter or environment variable
     import os
@@ -269,11 +306,15 @@ def run_command(collection_dir, bucket, base_url, collection_name, offset, limit
             bucket=bucket,
             base_url=base_url,
             collection_name=collection_name,
+            dataset=dataset,
             transformaiton_offset=offset,
             transformation_limit=limit,
             max_threads=max_threads
         )
         click.echo("Download complete!")
+    except ValueError as e:
+        click.echo(f"\nError: {e}", err=True)
+        sys.exit(1)
     except RuntimeError as e:
         click.echo(f"\nDownload failed: {e}", err=True)
         sys.exit(1)
