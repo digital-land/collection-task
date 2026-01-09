@@ -169,55 +169,54 @@ def download_transformed(
             if entry.get("status") == "410":
                 retired_resources.add(entry["old-resource"])
 
-    # Filter dataset_resource_map if specific dataset is requested
-    if dataset:
-        if dataset not in dataset_resource_map:
-            raise ValueError(f"Dataset '{dataset}' not found in dataset_resource_map")
-        filtered_dataset_resource_map = {dataset: dataset_resource_map[dataset]}
-        logger.info(f"Filtering downloads to dataset: {dataset}")
-    else:
-        filtered_dataset_resource_map = dataset_resource_map
+    # Build sorted list of (dataset, resource) pairs first
+    # This preserves duplicates where a resource is used in multiple datasets
+    datasets_to_process = [dataset] if dataset else sorted(dataset_resource_map.keys())
 
-    # Build resource list with offset/limit
-    sorted_resource_list = []
-    for key in sorted(filtered_dataset_resource_map.keys()):
-        sorted_resource_list.extend(sorted(filtered_dataset_resource_map[key]))
+    dataset_resource_pairs = []
+    for ds in sorted(datasets_to_process):
+        if ds not in dataset_resource_map:
+            if dataset:  # Only raise error if user explicitly requested this dataset
+                raise ValueError(f"Dataset '{dataset}' not found in dataset_resource_map")
+            continue
+        for resource in sorted(dataset_resource_map[ds]):
+            dataset_resource_pairs.append((ds, resource))
 
-    filtered_resources = sorted_resource_list
+    # Store total count before applying offset/limit
+    total_pairs = len(dataset_resource_pairs)
+
+    # Apply offset and limit to the transformation task list BEFORE considering retired resources
     if transformation_offset is not None:
-        filtered_resources = filtered_resources[transformation_offset:]
+        if transformation_offset >= total_pairs:
+            error_msg = f"Offset {transformation_offset} is beyond the total number of transformation tasks ({total_pairs})"
+            logger.error(error_msg)
+            if dataset:
+                logger.error(f"Note: Filtering by dataset '{dataset}'")
+            raise ValueError(error_msg)
+        dataset_resource_pairs = dataset_resource_pairs[transformation_offset:]
+
     if transformation_limit is not None:
-        filtered_resources = filtered_resources[:transformation_limit]
+        dataset_resource_pairs = dataset_resource_pairs[:transformation_limit]
 
-    # Build URL map - need to map resources back to datasets for proper paths
-    # Create a reverse mapping from resource to dataset
-    resource_to_dataset = {}
-    for dataset, resources in dataset_resource_map.items():
-        for resource in resources:
-            resource_to_dataset[resource] = dataset
+    logger.info(f"Downloading transformed files for {len(dataset_resource_pairs)} transformation tasks (out of {total_pairs} total)")
 
+    # Now build URL map from the filtered list
     url_map = {}
 
-    for resource in filtered_resources:
+    for ds, resource in dataset_resource_pairs:
         # Skip retired resources (status 410)
         if resource in retired_resources:
             logger.info(f"Skipping retired resource (status 410): {resource}")
             continue
 
-        dataset = resource_to_dataset.get(resource)
-        if not dataset:
-            logger.warning(f"Could not find dataset for resource {resource}, skipping")
-            continue
-
         # Define all file types to download per resource
         # Files are organized by dataset, not just resource
         files_to_download = [
-            (f"{transformed_dir}{dataset}/{resource}.csv", f"{transformed_dir}{dataset}/{resource}.csv"),
-            (f"{transformed_dir}{dataset}/{resource}.parquet", f"{transformed_dir}{dataset}/{resource}.parquet"),
-            (f"{issue_dir}{dataset}/{resource}.csv", f"{issue_dir}{dataset}/{resource}.csv"),
-            (f"{column_field_dir}{dataset}/{resource}.csv", f"{column_field_dir}{dataset}/{resource}.csv"),
-            (f"{dataset_resource_dir}{dataset}/{resource}.csv", f"{dataset_resource_dir}{dataset}/{resource}.csv"),
-            (f"{converted_resource_dir}{dataset}/{resource}.csv", f"{converted_resource_dir}{dataset}/{resource}.csv"),
+            (f"{transformed_dir}{ds}/{resource}.parquet", f"{transformed_dir}{ds}/{resource}.parquet"),
+            (f"{issue_dir}{ds}/{resource}.csv", f"{issue_dir}{ds}/{resource}.csv"),
+            (f"{column_field_dir}{ds}/{resource}.csv", f"{column_field_dir}{ds}/{resource}.csv"),
+            (f"{dataset_resource_dir}{ds}/{resource}.csv", f"{dataset_resource_dir}{ds}/{resource}.csv"),
+            (f"{converted_resource_dir}{ds}/{resource}.csv", f"{converted_resource_dir}{ds}/{resource}.csv"),
         ]
 
         for local_path, remote_path in files_to_download:
@@ -233,9 +232,9 @@ def download_transformed(
 
     # Log download info
     source_type = "S3" if bucket else "HTTP(S)"
-    num_resources = len(filtered_resources)
-    files_per_resource = len(url_map) // num_resources if num_resources > 0 else 0
-    logger.info(f"Downloading {len(url_map)} files ({files_per_resource} per resource) from {source_type}...")
+    num_transformation_tasks = len(dataset_resource_pairs) - len([r for _, r in dataset_resource_pairs if r in retired_resources])
+    files_per_task = len(url_map) // num_transformation_tasks if num_transformation_tasks > 0 else 0
+    logger.info(f"Downloading {len(url_map)} files ({files_per_task} per transformation task) from {source_type}...")
 
     # Download files
     results = download_files(url_map, max_threads=max_threads)

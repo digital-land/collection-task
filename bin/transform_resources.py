@@ -128,68 +128,72 @@ def process_resources(
     for entry in collection.old_resource.entries:
         redirect[entry["old-resource"]] = entry["resource"]
 
-    # Build task list first (dataset + resource pairs)
+    # Build sorted list of (dataset, resource) pairs first
     # This preserves duplicates where a resource is used in multiple datasets
     datasets_to_process = [dataset] if dataset else sorted(dataset_resource_map.keys())
 
-    tasks = []
+    dataset_resource_pairs = []
     for ds in sorted(datasets_to_process):
         if ds not in dataset_resource_map:
             continue
-
         for old_resource in sorted(dataset_resource_map[ds]):
-            # Get the actual resource to process (may be redirected)
-            resource = redirect.get(old_resource, old_resource)
-
-            # Skip resources that have been removed (redirect to empty)
-            if not resource:
-                logger.info(f"Skipping removed resource: {old_resource}")
-                continue
-
-            # Use the redirected resource path, but old_resource for metadata
-            resource_path = collection.resource_path(resource)
-            endpoints = " ".join(collection.resource_endpoints(old_resource))
-            organisations = " ".join(collection.resource_organisations(old_resource))
-            entry_date = collection.resource_start_date(old_resource)
-
-            config = {
-                'pipeline_dir': pipeline_dir,
-                'cache_dir': cache_dir,
-                'collection_dir': collection_dir,
-                'transformed_dir': transformed_dir,
-                'issue_dir': issue_dir,
-                'operational_issue_dir': operational_issue_dir,
-                'output_log_dir': output_log_dir,
-                'column_field_dir': column_field_dir,
-                'dataset_resource_dir': dataset_resource_dir,
-                'converted_resource_dir': converted_resource_dir,
-                'config_path': f"{cache_dir}config.sqlite3",
-                'organisation_path': f"{cache_dir}organisation.csv",
-            }
-
-            # If resource was redirected, include the old_resource in config
-            if resource != old_resource:
-                config['resource'] = old_resource
-
-            tasks.append((old_resource, ds, resource_path, endpoints, organisations, entry_date, config))
+            dataset_resource_pairs.append((ds, old_resource))
 
     # Store total count before applying offset/limit
-    total_tasks = len(tasks)
+    total_pairs = len(dataset_resource_pairs)
 
-    # Apply offset and limit to the actual transformation tasks
+    # Apply offset and limit to the resource list BEFORE considering redirects
     if offset is not None:
-        if offset >= total_tasks:
-            error_msg = f"Offset {offset} is beyond the total number of transformation tasks ({total_tasks})"
+        if offset >= total_pairs:
+            error_msg = f"Offset {offset} is beyond the total number of transformation tasks ({total_pairs})"
             logger.error(error_msg)
             if dataset:
                 logger.error(f"Note: Filtering by dataset '{dataset}'")
             raise ValueError(error_msg)
-        tasks = tasks[offset:]
+        dataset_resource_pairs = dataset_resource_pairs[offset:]
 
     if limit is not None:
-        tasks = tasks[:limit]
+        dataset_resource_pairs = dataset_resource_pairs[:limit]
 
-    logger.info(f"Processing {len(tasks)} transformation tasks (out of {total_tasks} total)")
+    # Now build tasks from the filtered list, considering redirects
+    tasks = []
+    for ds, old_resource in dataset_resource_pairs:
+        # Get the actual resource to process (may be redirected)
+        resource = redirect.get(old_resource, old_resource)
+
+        # Skip resources that have been removed (redirect to empty)
+        if not resource:
+            logger.info(f"Skipping removed resource: {old_resource}")
+            continue
+
+        # Use the redirected resource path, but old_resource for metadata
+        resource_path = collection.resource_path(resource)
+        endpoints = " ".join(collection.resource_endpoints(old_resource))
+        organisations = " ".join(collection.resource_organisations(old_resource))
+        entry_date = collection.resource_start_date(old_resource)
+
+        config = {
+            'pipeline_dir': pipeline_dir,
+            'cache_dir': cache_dir,
+            'collection_dir': collection_dir,
+            'transformed_dir': transformed_dir,
+            'issue_dir': issue_dir,
+            'operational_issue_dir': operational_issue_dir,
+            'output_log_dir': output_log_dir,
+            'column_field_dir': column_field_dir,
+            'dataset_resource_dir': dataset_resource_dir,
+            'converted_resource_dir': converted_resource_dir,
+            'config_path': f"{cache_dir}config.sqlite3",
+            'organisation_path': f"{cache_dir}organisation.csv",
+        }
+
+        # If resource was redirected, include the old_resource in config
+        if resource != old_resource:
+            config['resource'] = old_resource
+
+        tasks.append((old_resource, ds, resource_path, endpoints, organisations, entry_date, config))
+
+    logger.info(f"Processing {len(tasks)} transformation tasks (out of {total_pairs} total)")
 
     if not tasks:
         logger.warning("No transformation tasks to process after applying filters")
