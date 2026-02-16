@@ -35,6 +35,9 @@ def process_single_resource(args):
         column_field_dir = Path(config['column_field_dir']) / dataset
         dataset_resource_dir = Path(config['dataset_resource_dir']) / dataset
         converted_resource_dir = Path(config['converted_resource_dir']) / dataset
+        converted_dir = Path('converted')
+        converted_dir.mkdir(parents=True, exist_ok=True)
+        converted_path = converted_dir / dataset / f"{old_resource}.csv"
 
         # Create directories
         for directory in [transformed_dir, issue_dir, operational_issue_dir,
@@ -74,6 +77,7 @@ def process_single_resource(args):
             cache_dir=config.get('cache_dir', 'var/cache'),
             resource=config.get('resource'),  # For redirected resources
             output_log_dir=str(output_log_dir),
+            converted_path=converted_path
         )
 
         return (old_resource, True, None)
