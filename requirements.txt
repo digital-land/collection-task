@@ -1,2 +1,2 @@
--e git+https://github.com/digital-land/pipeline.git@main#egg=digital-land
+-e git+https://github.com/digital-land/pipeline.git@feat/rule_lookup#egg=digital-land
 tqdm
