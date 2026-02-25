@@ -1,122 +1,18 @@
 import logging
 import sys
 import click
-from tqdm import tqdm
-
-from pathlib import Path
-from urllib.request import urlretrieve
-from urllib.parse import urlparse
-from concurrent.futures import ThreadPoolExecutor
 
 from digital_land.collection import Collection
 
-try:
-    import boto3
-    HAS_BOTO3 = True
-except ImportError:
-    HAS_BOTO3 = False
+from collection_task.downloading import download_files
+from collection_task.filtering import (
+    build_redirect_map,
+    build_dataset_resource_pairs,
+    apply_offset_and_limit,
+)
 
-logger = logging.getLogger("__name__")
+logger = logging.getLogger(__name__)
 
-
-def download_file(url, output_path, raise_error=False, max_retries=5):
-    """Downloads a file using urllib for HTTP(S) URLs or boto3 for S3 URLs."""
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Check if this is an s3:// URL
-    if url.startswith('s3://'):
-        if not HAS_BOTO3:
-            error_msg = "boto3 is required to download from s3:// URLs. Install it with: pip install boto3"
-            logger.error(error_msg)
-            if raise_error:
-                raise ImportError(error_msg)
-            return
-
-        parsed = urlparse(url)
-        bucket = parsed.netloc
-        key = parsed.path.lstrip('/')
-
-        retries = 0
-        while retries < max_retries:
-            try:
-                s3 = boto3.client('s3')
-                s3.download_file(bucket, key, str(output_path))
-                break
-            except Exception as e:
-                if raise_error:
-                    raise e
-                else:
-                    logger.error(f"error downloading file from S3 url {url}: {e}")
-            retries += 1
-    else:
-        # Use urllib for HTTP(S) URLs (including https://s3.amazonaws.com/... URLs)
-        retries = 0
-        while retries < max_retries:
-            try:
-                urlretrieve(url, output_path)
-                break
-            except Exception as e:
-                if raise_error:
-                    raise e
-                else:
-                    logger.error(f"error downloading file from url {url}: {e}")
-            retries += 1
-
-
-def download_urls(url_map, max_threads=4):
-    """Downloads multiple files concurrently using threads.
-
-    Raises:
-        RuntimeError: If any downloads fail
-    """
-
-    # Only use tqdm if we're in an interactive terminal
-    use_progress_bar = sys.stdout.isatty()
-
-    with ThreadPoolExecutor(max_threads) as executor:
-        futures = {
-            executor.submit(download_file, url, output_path): url
-            for url, output_path in url_map.items()
-        }
-        results = []
-        errors = []
-        total_files = len(futures)
-
-        # Use tqdm for interactive terminals, plain iteration for cloud/non-interactive
-        if use_progress_bar:
-            iterator = tqdm(futures, desc="Downloading files")
-        else:
-            iterator = futures
-            logger.info(f"Starting download of {total_files} files...")
-
-        last_logged_percent = 0
-
-        for i, future in enumerate(iterator, 1):
-            try:
-                results.append(future.result())
-                # Log progress at 10% intervals in non-interactive mode
-                if not use_progress_bar:
-                    current_percent = (i * 100) // total_files
-                    if current_percent >= last_logged_percent + 10 or i == total_files:
-                        logger.info(f"Progress: {i}/{total_files} files ({current_percent}%)")
-                        last_logged_percent = current_percent
-            except Exception as e:
-                url = futures[future]
-                error_msg = f"Failed to download {url}: {e}"
-                logger.error(error_msg)
-                errors.append(error_msg)
-
-        if not use_progress_bar:
-            logger.info(f"Completed download of {total_files} files")
-
-        # Raise an error if any downloads failed
-        if errors:
-            error_summary = f"Failed to download {len(errors)} file(s):\n" + "\n".join(errors)
-            logger.error(error_summary)
-            raise RuntimeError(error_summary)
-
-        return results
 
 def download_resources(collection, collection_dir: str, bucket=None, base_url=None, collection_name=None, dataset=None, transformaiton_offset=None, transformation_limit=None, max_threads=4) -> None:
     """Download resources for a collection., can limit and offset based on how many. transformation
@@ -147,36 +43,15 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
 
     dataset_resource_map = collection.dataset_resource_map()
 
-    # Build redirect map from old_resource.csv
-    redirect = {}
-    for entry in collection.old_resource.entries:
-        redirect[entry["old-resource"]] = entry["resource"]
-
-    # Build list of (dataset, resource) pairs in order
-    # This preserves duplicates where a resource is used in multiple datasets
-    datasets_to_process = [dataset] if dataset else sorted(dataset_resource_map.keys())
-
-    dataset_resource_pairs = []
-    for key in sorted(datasets_to_process):
-        if key in dataset_resource_map:
-            for res in sorted(dataset_resource_map[key]):
-                dataset_resource_pairs.append((key, res))
-
-    # Store total count before applying offset/limit
+    redirect = build_redirect_map(collection.old_resource.entries)
+    dataset_resource_pairs = build_dataset_resource_pairs(dataset_resource_map, dataset=dataset)
     total_pairs = len(dataset_resource_pairs)
-
-    # Apply offset and limit to the actual download tasks
-    if transformaiton_offset is not None:
-        if transformaiton_offset >= total_pairs:
-            error_msg = f"Offset {transformaiton_offset} is beyond the total number of transformation tasks ({total_pairs})"
-            logger.error(error_msg)
-            if dataset:
-                logger.error(f"Note: Filtering by dataset '{dataset}'")
-            raise ValueError(error_msg)
-        dataset_resource_pairs = dataset_resource_pairs[transformaiton_offset:]
-
-    if transformation_limit is not None:
-        dataset_resource_pairs = dataset_resource_pairs[:transformation_limit]
+    dataset_resource_pairs = apply_offset_and_limit(
+        dataset_resource_pairs,
+        offset=transformaiton_offset,
+        limit=transformation_limit,
+        dataset=dataset,
+    )
 
     # Extract unique resources to download (a resource only needs to be downloaded once)
     resources_to_download = list(set([res for _, res in dataset_resource_pairs]))
@@ -214,7 +89,7 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
 
     # Download all resources
     logger.info(f"Downloading {len(download_map)} resources...")
-    download_urls(download_map, max_threads=max_threads)
+    download_files(download_map, max_threads=max_threads)
 
 
 @click.command()

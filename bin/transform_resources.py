@@ -5,10 +5,19 @@ from pathlib import Path
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 
+from digital_land import __version__ as dl_version
 from digital_land.collection import Collection
 from digital_land.pipeline import Pipeline
 from digital_land.specification import Specification
 from digital_land.commands import pipeline_run
+from digital_land.utils.hash_utils import hash_directory
+from digital_land.utils.dataset_resource_utils import resource_needs_processing
+
+from collection_task.filtering import (
+    build_redirect_map,
+    build_dataset_resource_pairs,
+    apply_offset_and_limit,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +44,6 @@ def process_single_resource(args):
         column_field_dir = Path(config['column_field_dir']) / dataset
         dataset_resource_dir = Path(config['dataset_resource_dir']) / dataset
         converted_resource_dir = Path(config['converted_resource_dir']) / dataset
-        converted_dir = Path('converted')
-        converted_dir.mkdir(parents=True, exist_ok=True)
-        converted_path = converted_dir / dataset / f"{old_resource}.csv"
 
         # Create directories
         for directory in [transformed_dir, issue_dir, operational_issue_dir,
@@ -77,7 +83,6 @@ def process_single_resource(args):
             cache_dir=config.get('cache_dir', 'var/cache'),
             resource=config.get('resource'),  # For redirected resources
             output_log_dir=str(output_log_dir),
-            converted_path=converted_path
         )
 
         return (old_resource, True, None)
@@ -91,6 +96,7 @@ def process_single_resource(args):
 def process_resources(
     collection_dir,
     pipeline_dir="pipeline/",
+    specification_dir="specification/",
     cache_dir="var/cache/",
     transformed_dir="transformed/",
     issue_dir="issue/",
@@ -102,7 +108,8 @@ def process_resources(
     dataset=None,
     offset=None,
     limit=None,
-    max_workers=None
+    max_workers=None,
+    reprocess=False,
 ):
     """Process resources using multiprocessing.
 
@@ -127,37 +134,32 @@ def process_resources(
     collection.load()
     dataset_resource_map = collection.dataset_resource_map()
 
-    # Build redirect map from old_resource.csv
-    redirect = {}
-    for entry in collection.old_resource.entries:
-        redirect[entry["old-resource"]] = entry["resource"]
-
-    # Build sorted list of (dataset, resource) pairs first
-    # This preserves duplicates where a resource is used in multiple datasets
-    datasets_to_process = [dataset] if dataset else sorted(dataset_resource_map.keys())
-
-    dataset_resource_pairs = []
-    for ds in sorted(datasets_to_process):
-        if ds not in dataset_resource_map:
-            continue
-        for old_resource in sorted(dataset_resource_map[ds]):
-            dataset_resource_pairs.append((ds, old_resource))
-
-    # Store total count before applying offset/limit
+    redirect = build_redirect_map(collection.old_resource.entries)
+    dataset_resource_pairs = build_dataset_resource_pairs(dataset_resource_map, dataset=dataset)
     total_pairs = len(dataset_resource_pairs)
+    if not reprocess:
+        config_hash = hash_directory(pipeline_dir)
+        specification_hash = hash_directory(specification_dir)
+        before_skip = len(dataset_resource_pairs)
+        dataset_resource_pairs = [
+            (ds, resource) for ds, resource in dataset_resource_pairs
+            if resource_needs_processing(
+                dataset_resource_dir, ds, resource,
+                dl_version, config_hash, specification_hash,
+            )
+        ]
+        skipped = before_skip - len(dataset_resource_pairs)
+        logger.info(
+            f"Skipping {skipped} already up-to-date resources, "
+            f"{len(dataset_resource_pairs)} to process"
+        )
 
-    # Apply offset and limit to the resource list BEFORE considering redirects
-    if offset is not None:
-        if offset >= total_pairs:
-            error_msg = f"Offset {offset} is beyond the total number of transformation tasks ({total_pairs})"
-            logger.error(error_msg)
-            if dataset:
-                logger.error(f"Note: Filtering by dataset '{dataset}'")
-            raise ValueError(error_msg)
-        dataset_resource_pairs = dataset_resource_pairs[offset:]
-
-    if limit is not None:
-        dataset_resource_pairs = dataset_resource_pairs[:limit]
+    dataset_resource_pairs = apply_offset_and_limit(
+        dataset_resource_pairs,
+        offset=offset,
+        limit=limit,
+        dataset=dataset,
+    )
 
     # Now build tasks from the filtered list, considering redirects
     tasks = []
@@ -340,6 +342,17 @@ def process_resources(
     help="Number of worker processes (defaults to CPU count)"
 )
 @click.option(
+    "--specification-dir",
+    default="specification/",
+    help="Path to the specification directory"
+)
+@click.option(
+    "--reprocess",
+    is_flag=True,
+    default=False,
+    help="Reprocess all resources, even those whose dataset resource log is already up-to-date"
+)
+@click.option(
     "--quiet",
     is_flag=True,
     help="Suppress progress output (only show warnings and errors)"
@@ -352,6 +365,7 @@ def process_resources(
 def run_command(
     collection_dir,
     pipeline_dir,
+    specification_dir,
     cache_dir,
     transformed_dir,
     issue_dir,
@@ -364,6 +378,7 @@ def run_command(
     offset,
     limit,
     max_workers,
+    reprocess,
     quiet,
     debug
 ):
@@ -381,6 +396,7 @@ def run_command(
         result = process_resources(
             collection_dir=collection_dir,
             pipeline_dir=pipeline_dir,
+            specification_dir=specification_dir,
             cache_dir=cache_dir,
             transformed_dir=transformed_dir,
             issue_dir=issue_dir,
@@ -392,7 +408,8 @@ def run_command(
             dataset=dataset,
             offset=offset,
             limit=limit,
-            max_workers=max_workers
+            max_workers=max_workers,
+            reprocess=reprocess,
         )
 
         # Handle case where no tasks were processed

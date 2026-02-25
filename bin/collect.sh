@@ -17,6 +17,9 @@ COLLECTION_DATASET_BUCKET_NAME=${COLLECTION_DATASET_BUCKET_NAME:-""}
 DATASTORE_URL=${DATASTORE_URL:-"https://files.planning.data.gov.uk/"}
 REGENERATE_LOG_OVERRIDE=${REGENERATE_LOG_OVERRIDE:-""}
 INCREMENTAL_LOADING_OVERRIDE=${INCREMENTAL_LOADING_OVERRIDE:-"false"}
+PIPELINE_DIR=${PIPELINE_DIR:-"pipeline/"}
+DATASET_RESOURCE_DIR=${DATASET_RESOURCE_DIR:-"var/dataset-resource/"}
+REPROCESS=${REPROCESS:-""}
 
 # Set REFILL_TODAYS_LOGS based on REGENERATE_LOG_OVERRIDE
 if [ "$REGENERATE_LOG_OVERRIDE" = "True" ]; then
@@ -51,7 +54,33 @@ echo "STEP 5: Build the collection database"
 make collection
 
 echo "STEP 6: Create state"
-make state.json
+DATASET_RESOURCE_CMD="python bin/download_dataset_resource.py --collection-dir $COLLECTION_DIR --collection-name $COLLECTION_NAME --dataset-resource-dir $DATASET_RESOURCE_DIR"
+
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    DATASET_RESOURCE_CMD="$DATASET_RESOURCE_CMD --bucket $COLLECTION_DATASET_BUCKET_NAME"
+elif [ -n "$DATASTORE_URL" ]; then
+    DATASET_RESOURCE_CMD="$DATASET_RESOURCE_CMD --base-url $DATASTORE_URL"
+fi
+
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ] || [ -n "$DATASTORE_URL" ]; then
+    if [ -z "$REPROCESS" ]; then
+        echo "Downloading dataset resource logs for skip-aware transform counts..."
+        eval $DATASET_RESOURCE_CMD
+    else
+        echo "Skipping dataset resource log download - REPROCESS is set, logs will be written fresh"
+    fi
+
+    digital-land save-state \
+        --specification-dir=specification \
+        --collection-dir="$COLLECTION_DIR" \
+        --pipeline-dir="$PIPELINE_DIR" \
+        --resource-dir="${COLLECTION_DIR}resource/" \
+        --incremental-loading-override="$INCREMENTAL_LOADING_OVERRIDE" \
+        --dataset-resource-dir="$DATASET_RESOURCE_DIR" \
+        --output-path=state.json
+else
+    make state.json
+fi
 
 
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
