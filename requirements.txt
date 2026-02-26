@@ -1,2 +1,3 @@
--e git+https://github.com/digital-land/pipeline.git@feat/rule_lookup#egg=digital-land
+-e git+https://github.com/digital-land/pipeline.git@feat/improve_log#egg=digital-land
 tqdm
+cloudpathlib[s3]
