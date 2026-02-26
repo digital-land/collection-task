@@ -186,10 +186,6 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Saving expectations..."
     make save-expectations
 
-    echo "Saving performance metrics..."
-    make save-performance
-
-
     echo "All outputs saved to S3 successfully"
 else
     echo "Step 7: Skipping S3 upload (no bucket configured)"
