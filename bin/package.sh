@@ -23,6 +23,11 @@ if [ -z "$PARQUET_DATASETS_BUCKET" ]; then
     exit 1
 fi
 
+if [ -z "$COLLECTION_DATA_BUCKET" ]; then
+    echo "Error: COLLECTION_DATA_BUCKET environment variable must be set"
+    exit 1
+fi
+
 # Optional environment variables with defaults
 SPECIFICATION_DIR=${SPECIFICATION_DIR:-"specification/"}
 PIPELINE_DIR=${PIPELINE_DIR:-"pipeline/"}
@@ -39,7 +44,6 @@ COLLECTION_DATASET_BUCKET_NAME=${COLLECTION_DATASET_BUCKET_NAME:-""}
 
 SQLITE_FILE="${DATASET_DIR}${DATASET_NAME}.sqlite3"
 CSV_FILE="${DATASET_DIR}${DATASET_NAME}.csv"
-PARQUET_PATH="s3://${PARQUET_DATASETS_BUCKET}/${DATASET_NAME}"
 
 # Step 1: Update makerules
 echo "Step 1: Updating makerules..."
@@ -50,12 +54,14 @@ echo "Step 2: Initializing dependencies and configuration..."
 make init
 
 # Step 3: Build dataset SQLite from parquet tables in S3
-echo "Step 3: Building dataset package for $DATASET_NAME from $PARQUET_PATH..."
+echo "Step 3: Building dataset package for $DATASET_NAME from $PARQUET_DATASETS_PATH..."
 mkdir -p "$DATASET_DIR"
 
 BUILD_CMD="python bin/build_dataset_package.py \
     --dataset $DATASET_NAME \
-    --parquet-path $PARQUET_PATH \
+    --parquet-datasets-path $PARQUET_DATASETS_BUCKET \
+    --collection-data-path $COLLECTION_DATA_BUCKET \
+    --collection $COLLECTION_NAME \
     --output-path $SQLITE_FILE \
     --specification-dir $SPECIFICATION_DIR"
 
