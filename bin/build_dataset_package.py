@@ -3,7 +3,7 @@ import sqlite3
 import click
 import duckdb
 from pathlib import Path
-from cloudpathlib import AnyPath
+from cloudpathlib import AnyPath, S3Path
 
 from digital_land.organisation import Organisation
 from digital_land.package.dataset import DatasetPackage
@@ -126,7 +126,8 @@ def build_dataset_package(
     conn = duckdb.connect()
     conn.execute("INSTALL httpfs; LOAD httpfs;")
     conn.execute("INSTALL sqlite; LOAD sqlite;")
-    conn.execute("CREATE SECRET (TYPE S3, PROVIDER CREDENTIAL_CHAIN);")
+    if isinstance(base_path, S3Path) or isinstance(AnyPath(collection_data_path), S3Path):
+        conn.execute("CREATE SECRET (TYPE S3, PROVIDER CREDENTIAL_CHAIN);")
     conn.execute(f"ATTACH DATABASE '{output_path}' AS sqlite_db (TYPE SQLITE);")
 
     # Load parquet tables (Hive-partitioned by dataset)
