@@ -11,21 +11,28 @@ from digital_land.specification import Specification
 
 logger = logging.getLogger(__name__)
 
-# Tables loaded from Hive-partitioned parquet in the parquet datasets bucket
-# Values are the SQLite table names (underscores, from colname() in SqlitePackage)
-PARQUET_TABLE_MAP = {
-    "entity": "entity",
-    "fact": "fact",
-    "fact_resource": "fact_resource",
-    "issue": "issue",
+# Known columns present in each Hive-partitioned parquet table.
+# fact, fact_resource and issue do not have start_date or end_date.
+PARQUET_COLUMNS = {
+    "entity": [
+        "dataset", "end_date", "entity", "entry_date", "geojson", "geometry",
+        "json", "name", "organisation_entity", "point", "prefix", "quality",
+        "reference", "start_date", "typology",
+    ],
+    "fact": [
+        "entity", "fact", "field", "entry_date", "priority", "reference_entity", "value",
+    ],
+    "fact_resource": [
+        "fact", "entry_date", "entry_number", "priority", "resource",
+    ],
+    "issue": [
+        "entity", "entry_date", "entry_number", "field", "issue_type",
+        "line_number", "dataset", "resource", "value", "message",
+    ],
 }
 
-# All SQLite tables — used to read the schema after create_database()
-ALL_SQLITE_TABLES = list(PARQUET_TABLE_MAP.values()) + [
-    "dataset_resource",
-    "column_field",
-    "old_entity",
-]
+# CSV-sourced tables — schema still read dynamically from SQLite after create_database()
+CSV_SQLITE_TABLES = ["dataset_resource", "column_field", "old_entity"]
 
 
 def _csv_sources(collection_data_path, collection, dataset, entity_min, entity_max):
@@ -113,12 +120,12 @@ def build_dataset_package(
     package.create_database()
     package.disconnect()
 
-    # Read the SQLite schema so we can SELECT only the columns that belong in each table
+    # Read the SQLite schema for CSV tables only
     db_conn = sqlite3.connect(str(output_path))
-    table_columns = {}
-    for sqlite_table in ALL_SQLITE_TABLES:
-        cols = [row[1] for row in db_conn.execute(f'PRAGMA table_info("{sqlite_table}")').fetchall()]
-        table_columns[sqlite_table] = cols
+    csv_table_columns = {
+        t: [row[1] for row in db_conn.execute(f'PRAGMA table_info("{t}")').fetchall()]
+        for t in CSV_SQLITE_TABLES
+    }
     db_conn.close()
 
     # Use DuckDB to load all tables
@@ -131,29 +138,19 @@ def build_dataset_package(
     conn.execute(f"ATTACH DATABASE '{output_path}' AS sqlite_db (TYPE SQLITE);")
 
     # Load parquet tables (Hive-partitioned by dataset)
-    for table_name, sqlite_table in PARQUET_TABLE_MAP.items():
+    for table_name, cols in PARQUET_COLUMNS.items():
         table_path = base_path / table_name
 
         if not table_path.exists():
-            logger.debug(f"No directory at {table_path}, skipping '{sqlite_table}'")
+            logger.debug(f"No directory at {table_path}, skipping '{table_name}'")
             continue
 
         scan_path = f"{table_path}/**/*.parquet"
-
-        # Find which SQLite columns are actually present in the parquet
-        # (includes virtual Hive partition columns such as 'dataset')
-        parquet_cols = {
-            row[0]
-            for row in conn.execute(
-                f"DESCRIBE SELECT * FROM parquet_scan('{scan_path}', hive_partitioning=true) LIMIT 0"
-            ).fetchall()
-        }
-        cols = [c for c in table_columns[sqlite_table] if c in parquet_cols]
         col_list = ", ".join(f'"{c}"' for c in cols)
 
-        logger.info(f"Loading parquet files into '{sqlite_table}'")
+        logger.info(f"Loading parquet files into '{table_name}'")
         conn.execute(f"""
-            INSERT INTO sqlite_db."{sqlite_table}" ({col_list})
+            INSERT INTO sqlite_db."{table_name}" ({col_list})
             SELECT {col_list}
             FROM parquet_scan('{scan_path}', hive_partitioning=true)
             WHERE dataset = '{dataset}'
@@ -165,7 +162,7 @@ def build_dataset_package(
         for sqlite_table, path, where_clause in _csv_sources(
             collection_data_path, collection, dataset, entity_min, entity_max
         ):
-            _load_csv_table(conn, sqlite_table, path, table_columns, where_clause)
+            _load_csv_table(conn, sqlite_table, path, csv_table_columns, where_clause)
     else:
         logger.debug("No collection data path configured, skipping CSV tables")
 

@@ -53,21 +53,46 @@ def parquet_dir(tmp_path):
     The dataset column is derived from the directory name by DuckDB's
     hive_partitioning — it is not a data column inside the parquet files.
     """
+    null_str2 = pa.array([None, None], type=pa.string())
+    null_str1 = pa.array([None], type=pa.string())
+
     # entity table — two rows for DATASET, one decoy row for OTHER_DATASET
     _write_parquet(
         tmp_path / "entity" / f"dataset={DATASET}" / "data.parquet",
         pa.table({
-            "entity":    pa.array([1, 2], type=pa.int64()),
-            "name":      pa.array(["Entity One", "Entity Two"], type=pa.string()),
-            "reference": pa.array(["ref-1", "ref-2"], type=pa.string()),
+            "end_date":          null_str2,
+            "entity":            pa.array([1, 2], type=pa.int64()),
+            "entry_date":        null_str2,
+            "geojson":           null_str2,
+            "geometry":          null_str2,
+            "json":              null_str2,
+            "name":              pa.array(["Entity One", "Entity Two"], type=pa.string()),
+            "organisation_entity": null_str2,
+            "point":             null_str2,
+            "prefix":            null_str2,
+            "quality":           null_str2,
+            "reference":         pa.array(["ref-1", "ref-2"], type=pa.string()),
+            "start_date":        null_str2,
+            "typology":          null_str2,
         }),
     )
     _write_parquet(
         tmp_path / "entity" / f"dataset={OTHER_DATASET}" / "data.parquet",
         pa.table({
-            "entity":    pa.array([99], type=pa.int64()),
-            "name":      pa.array(["Should Not Appear"], type=pa.string()),
-            "reference": pa.array(["ref-99"], type=pa.string()),
+            "end_date":          null_str1,
+            "entity":            pa.array([99], type=pa.int64()),
+            "entry_date":        null_str1,
+            "geojson":           null_str1,
+            "geometry":          null_str1,
+            "json":              null_str1,
+            "name":              pa.array(["Should Not Appear"], type=pa.string()),
+            "organisation_entity": null_str1,
+            "point":             null_str1,
+            "prefix":            null_str1,
+            "quality":           null_str1,
+            "reference":         pa.array(["ref-99"], type=pa.string()),
+            "start_date":        null_str1,
+            "typology":          null_str1,
         }),
     )
 
@@ -75,10 +100,13 @@ def parquet_dir(tmp_path):
     _write_parquet(
         tmp_path / "fact" / f"dataset={DATASET}" / "data.parquet",
         pa.table({
-            "fact":   pa.array(["fact-1", "fact-2"], type=pa.string()),
-            "entity": pa.array([1, 2], type=pa.int64()),
-            "field":  pa.array(["name", "reference"], type=pa.string()),
-            "value":  pa.array(["Entity One", "ref-1"], type=pa.string()),
+            "entity":           pa.array([1, 2], type=pa.int64()),
+            "entry_date":       null_str2,
+            "fact":             pa.array(["fact-1", "fact-2"], type=pa.string()),
+            "field":            pa.array(["name", "reference"], type=pa.string()),
+            "priority":         pa.array([None, None], type=pa.int64()),
+            "reference_entity": null_str2,
+            "value":            pa.array(["Entity One", "ref-1"], type=pa.string()),
         }),
     )
 
