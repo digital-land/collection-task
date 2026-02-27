@@ -126,6 +126,7 @@ def build_dataset_package(
     conn = duckdb.connect()
     conn.execute("INSTALL httpfs; LOAD httpfs;")
     conn.execute("INSTALL sqlite; LOAD sqlite;")
+    conn.execute("CREATE SECRET (TYPE S3, PROVIDER CREDENTIAL_CHAIN);")
     conn.execute(f"ATTACH DATABASE '{output_path}' AS sqlite_db (TYPE SQLITE);")
 
     # Load parquet tables (Hive-partitioned by dataset)
