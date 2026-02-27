@@ -23,6 +23,8 @@ TRANSFORMED_JOBS=${TRANSFORMED_JOBS:-8}
 PIPELINE_DIR=${PIPELINE_DIR:-"pipeline/"}
 CACHE_DIR=${CACHE_DIR:-"var/cache/"}
 TRANSFORMED_DIR=${TRANSFORMED_DIR:-"transformed/"}
+DATASET_RESOURCE_DIR=${DATASET_RESOURCE_DIR:-"var/dataset-resource/"}
+REPROCESS=${REPROCESS:-""}
 
 # Step 1: Update makerules
 echo "Step 1: Updating makerules..."
@@ -36,8 +38,34 @@ make init
 echo "Step 3: Building collection database..."
 make collection
 
-# Step 4: Download resources
-echo "Step 4: Downloading resources..."
+# Step 4: Download dataset resource logs (used to skip already up-to-date resources)
+# Skipped when REPROCESS is set - logs will be freshly written by the transform step
+if [ -z "$REPROCESS" ]; then
+    echo "Step 4: Downloading dataset resource logs..."
+
+    DATASET_RESOURCE_CMD="python bin/download_dataset_resource.py --collection-dir $COLLECTION_DIR --collection-name $COLLECTION_NAME --dataset-resource-dir $DATASET_RESOURCE_DIR"
+
+    if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+        DATASET_RESOURCE_CMD="$DATASET_RESOURCE_CMD --bucket $COLLECTION_DATASET_BUCKET_NAME"
+    elif [ -n "$DATASTORE_URL" ]; then
+        DATASET_RESOURCE_CMD="$DATASET_RESOURCE_CMD --base-url $DATASTORE_URL"
+    else
+        echo "Error: Either COLLECTION_DATASET_BUCKET_NAME or DATASTORE_URL must be set"
+        exit 1
+    fi
+
+    if [ -n "$DATASET" ]; then
+        DATASET_RESOURCE_CMD="$DATASET_RESOURCE_CMD --dataset $DATASET"
+    fi
+
+    echo "Command: $DATASET_RESOURCE_CMD"
+    eval $DATASET_RESOURCE_CMD
+else
+    echo "Step 4: Skipping dataset resource log download - REPROCESS is set, logs will be written fresh"
+fi
+
+# Step 5: Download resources
+echo "Step 5: Downloading resources..."
 
 # Build the download command
 DOWNLOAD_CMD="python bin/download_resources.py --collection-dir $COLLECTION_DIR"
@@ -81,8 +109,8 @@ eval $DOWNLOAD_CMD
 
 echo "Resources downloaded successfully"
 
-# Step 5: Transform resources using Python multiprocessing
-echo "Step 5: Transforming resources..."
+# Step 6: Transform resources using Python multiprocessing
+echo "Step 6: Transforming resources..."
 
 TRANSFORM_CMD="python bin/transform_resources.py --collection-dir $COLLECTION_DIR"
 
@@ -90,6 +118,7 @@ TRANSFORM_CMD="python bin/transform_resources.py --collection-dir $COLLECTION_DI
 TRANSFORM_CMD="$TRANSFORM_CMD --pipeline-dir $PIPELINE_DIR"
 TRANSFORM_CMD="$TRANSFORM_CMD --cache-dir $CACHE_DIR"
 TRANSFORM_CMD="$TRANSFORM_CMD --transformed-dir $TRANSFORMED_DIR"
+TRANSFORM_CMD="$TRANSFORM_CMD --dataset-resource-dir $DATASET_RESOURCE_DIR"
 
 # Add dataset filter if specified
 if [ -n "$DATASET" ]; then
@@ -110,6 +139,11 @@ if [ -n "$TRANSFORMED_JOBS" ]; then
     TRANSFORM_CMD="$TRANSFORM_CMD --max-workers $TRANSFORMED_JOBS"
 fi
 
+# Add reprocess flag if set
+if [ -n "$REPROCESS" ]; then
+    TRANSFORM_CMD="$TRANSFORM_CMD --reprocess"
+fi
+
 # Add verbose flag if needed
 if [ -n "$VERBOSE" ]; then
     TRANSFORM_CMD="$TRANSFORM_CMD --verbose"
@@ -118,9 +152,9 @@ fi
 echo "Command: $TRANSFORM_CMD"
 eval $TRANSFORM_CMD
 
-# Step 6: Save outputs to S3 if bucket is configured
+# Step 7: Save outputs to S3 if bucket is configured
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo "Step 6: Saving outputs to S3 bucket: $COLLECTION_DATASET_BUCKET_NAME"
+    echo "Step 7: Saving outputs to S3 bucket: $COLLECTION_DATASET_BUCKET_NAME"
 
     # Use existing make targets for S3 syncing
     echo "Saving transformed files and related outputs..."
@@ -128,7 +162,7 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 
     echo "All outputs saved to S3 successfully"
 else
-    echo "Step 6: Skipping S3 sync - no COLLECTION_DATASET_BUCKET_NAME defined"
+    echo "Step 7: Skipping S3 sync - no COLLECTION_DATASET_BUCKET_NAME defined"
 fi
 
 echo "Transform pipeline complete!"

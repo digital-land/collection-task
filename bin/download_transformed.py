@@ -1,119 +1,17 @@
 import logging
 import sys
 import click
-from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor
-from tqdm import tqdm
-from urllib.request import urlretrieve
-from urllib.parse import urlparse
 
 from digital_land.collection import Collection
 
-try:
-    import boto3
-    HAS_BOTO3 = True
-except ImportError:
-    HAS_BOTO3 = False
+from collection_task.downloading import download_files
+from collection_task.filtering import (
+    build_retired_resources_set,
+    build_dataset_resource_pairs,
+    apply_offset_and_limit,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def download_file(url, output_path, raise_error=False, max_retries=5):
-    """Downloads a file from an S3 or HTTPS URL.
-
-    Automatically detects S3 URLs (s3://) and uses boto3 client.
-    For HTTPS URLs, uses standard urlretrieve.
-
-    Args:
-        url: S3 URL (s3://bucket/key) or HTTPS URL
-        output_path: Local path to save the file
-        raise_error: Whether to raise exceptions or log them
-        max_retries: Maximum number of retry attempts
-
-    Returns:
-        True if download succeeded, False otherwise
-    """
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Detect if this is an S3 URL
-    parsed = urlparse(url)
-    is_s3 = parsed.scheme == 's3'
-
-    if is_s3:
-        if not HAS_BOTO3:
-            raise ImportError("boto3 is required for S3 downloads. Install it with: pip install boto3")
-
-        # Parse S3 bucket and key from s3://bucket/key
-        bucket = parsed.netloc
-        key = parsed.path.lstrip('/')
-        s3_client = boto3.client('s3')
-
-    retries = 0
-    while retries < max_retries:
-        try:
-            if is_s3:
-                s3_client.download_file(bucket, key, str(output_path))
-            else:
-                urlretrieve(url, str(output_path))
-            return True
-        except Exception as e:
-            if raise_error:
-                raise e
-            else:
-                logger.error(f"error downloading file from {url}: {e}")
-        retries += 1
-    return False
-
-
-def download_files(url_map, max_threads=4):
-    """Orchestrates downloads across threads using a URL map.
-
-    Args:
-        url_map: Dictionary mapping URLs to local output paths {url: output_path}
-        max_threads: Maximum number of concurrent download threads
-
-    Raises:
-        RuntimeError: If any downloads fail
-    """
-    use_progress_bar = sys.stdout.isatty()
-
-    with ThreadPoolExecutor(max_threads) as executor:
-        futures = {
-            executor.submit(download_file, url, output_path): url
-            for url, output_path in url_map.items()
-        }
-        results = []
-        failed_downloads = []
-
-        if use_progress_bar:
-            iterator = tqdm(futures, desc="Downloading files")
-        else:
-            iterator = futures
-            logger.info(f"Starting download of {len(futures)} files...")
-
-        for i, future in enumerate(iterator, 1):
-            url = futures[future]
-            result = future.result()
-            results.append(result)
-
-            # Track failed downloads
-            if not result:
-                failed_downloads.append(url)
-
-            if not use_progress_bar and i % 50 == 0:
-                logger.info(f"Downloaded {i}/{len(futures)} files")
-
-        if not use_progress_bar:
-            logger.info(f"Completed download of {len(futures)} files")
-
-        # Raise error if any downloads failed
-        if failed_downloads:
-            error_summary = f"Failed to download {len(failed_downloads)} file(s):\n" + "\n".join(failed_downloads)
-            logger.error(error_summary)
-            raise RuntimeError(error_summary)
-
-    return results
 
 
 def download_transformed(
@@ -159,44 +57,18 @@ def download_transformed(
     if not bucket and not base_url:
         raise ValueError("Either bucket or base_url must be provided")
 
-    if bucket and not HAS_BOTO3:
-        raise ImportError("boto3 is required for S3 downloads. Install it with: pip install boto3")
-
-    # Build set of retired resources (status 410) from old_resource.csv
     retired_resources = set()
     if collection and hasattr(collection, 'old_resource'):
-        for entry in collection.old_resource.entries:
-            if entry.get("status") == "410":
-                retired_resources.add(entry["old-resource"])
+        retired_resources = build_retired_resources_set(collection.old_resource.entries)
 
-    # Build sorted list of (dataset, resource) pairs first
-    # This preserves duplicates where a resource is used in multiple datasets
-    datasets_to_process = [dataset] if dataset else sorted(dataset_resource_map.keys())
-
-    dataset_resource_pairs = []
-    for ds in sorted(datasets_to_process):
-        if ds not in dataset_resource_map:
-            if dataset:  # Only raise error if user explicitly requested this dataset
-                raise ValueError(f"Dataset '{dataset}' not found in dataset_resource_map")
-            continue
-        for resource in sorted(dataset_resource_map[ds]):
-            dataset_resource_pairs.append((ds, resource))
-
-    # Store total count before applying offset/limit
+    dataset_resource_pairs = build_dataset_resource_pairs(dataset_resource_map, dataset=dataset)
     total_pairs = len(dataset_resource_pairs)
-
-    # Apply offset and limit to the transformation task list BEFORE considering retired resources
-    if transformation_offset is not None:
-        if transformation_offset >= total_pairs:
-            error_msg = f"Offset {transformation_offset} is beyond the total number of transformation tasks ({total_pairs})"
-            logger.error(error_msg)
-            if dataset:
-                logger.error(f"Note: Filtering by dataset '{dataset}'")
-            raise ValueError(error_msg)
-        dataset_resource_pairs = dataset_resource_pairs[transformation_offset:]
-
-    if transformation_limit is not None:
-        dataset_resource_pairs = dataset_resource_pairs[:transformation_limit]
+    dataset_resource_pairs = apply_offset_and_limit(
+        dataset_resource_pairs,
+        offset=transformation_offset,
+        limit=transformation_limit,
+        dataset=dataset,
+    )
 
     logger.info(f"Downloading transformed files for {len(dataset_resource_pairs)} transformation tasks (out of {total_pairs} total)")
 

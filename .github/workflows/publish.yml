@@ -10,8 +10,12 @@ on:
         description: The environment to deploy to.
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   detect-environments:
     runs-on: ubuntu-latest
+    needs: [test]
     outputs:
       environments: ${{ steps.environments.outputs.result }}
     steps:
