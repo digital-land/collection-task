@@ -137,23 +137,29 @@ def build_dataset_package(
         conn.execute("CREATE SECRET (TYPE S3, PROVIDER CREDENTIAL_CHAIN);")
     conn.execute(f"ATTACH DATABASE '{output_path}' AS sqlite_db (TYPE SQLITE);")
 
-    # Load parquet tables (Hive-partitioned by dataset)
+    # Load parquet tables — scan only the target dataset's partition directory
+    # to avoid hive partition schema mismatches across different dataset partitions
     for table_name, cols in PARQUET_COLUMNS.items():
-        table_path = base_path / table_name
+        dataset_partition_path = base_path / table_name / f"dataset={dataset}"
 
-        if not table_path.exists():
-            logger.debug(f"No directory at {table_path}, skipping '{table_name}'")
+        if not dataset_partition_path.exists():
+            logger.debug(f"No directory at {dataset_partition_path}, skipping '{table_name}'")
             continue
 
-        scan_path = f"{table_path}/**/*.parquet"
+        scan_path = f"{dataset_partition_path}/**/*.parquet"
+        # dataset is a virtual hive column — supply it as a literal in the same
+        # position to keep col_list and select_list aligned
         col_list = ", ".join(f'"{c}"' for c in cols)
+        select_list = ", ".join(
+            f"'{dataset}' AS \"dataset\"" if c == "dataset" else f'"{c}"'
+            for c in cols
+        )
 
         logger.info(f"Loading parquet files into '{table_name}'")
         conn.execute(f"""
             INSERT INTO sqlite_db."{table_name}" ({col_list})
-            SELECT {col_list}
-            FROM parquet_scan('{scan_path}', hive_partitioning=true)
-            WHERE dataset = '{dataset}'
+            SELECT {select_list}
+            FROM parquet_scan('{scan_path}')
         """)
 
     # Load CSV tables from the collection data path
