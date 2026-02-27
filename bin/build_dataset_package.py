@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # fact, fact_resource and issue do not have start_date or end_date.
 PARQUET_COLUMNS = {
     "entity": [
-        "dataset", "end_date", "entity", "entry_date", "geojson", "geometry",
+        "dataset", "end_date", "entity", "entry_date", "geometry",
         "json", "name", "organisation_entity", "point", "prefix", "quality",
         "reference", "start_date", "typology",
     ],
