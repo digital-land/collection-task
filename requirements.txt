@@ -1,2 +1,2 @@
--e git+https://github.com/digital-land/pipeline.git@502-create-performance-report-for-legacy-vs-polars-pipelines-phases-29
+-e git+https://github.com/digital-land/pipeline.git@502-create-performance-report-for-legacy-vs-polars-pipelines-phases-29#egg=digital-land
 tqdm
