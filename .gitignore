@@ -1,3 +1,4 @@
+.DS_Store
 /task/collection
 /collection
 /task/pipeline
@@ -23,3 +24,4 @@
 /log
 # python
 .venv
+__pycache__/

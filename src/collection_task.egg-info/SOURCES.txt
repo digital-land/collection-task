@@ -1,0 +1,10 @@
+LICENSE
+README.md
+pyproject.toml
+src/collection_task/__init__.py
+src/collection_task/downloading.py
+src/collection_task/filtering.py
+src/collection_task.egg-info/PKG-INFO
+src/collection_task.egg-info/SOURCES.txt
+src/collection_task.egg-info/dependency_links.txt
+src/collection_task.egg-info/top_level.txt
