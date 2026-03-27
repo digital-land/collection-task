@@ -2,3 +2,4 @@
 -e .
 tqdm
 cloudpathlib[s3]
+duckdb~=1.4.0
