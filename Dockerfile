@@ -1,4 +1,4 @@
-FROM python:3.8-slim-bookworm
+FROM python:3.10-slim-alpine
 WORKDIR /
 RUN apt-get update
 RUN apt-get upgrade -y

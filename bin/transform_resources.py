@@ -2,7 +2,7 @@ import logging
 import sys
 import click
 from pathlib import Path
-from multiprocessing import Pool, cpu_count
+from multiprocessing import get_context, cpu_count
 from tqdm import tqdm
 
 from digital_land import __version__ as dl_version
@@ -20,6 +20,10 @@ from collection_task.filtering import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _init_worker(log_level):
+    logging.basicConfig(level=log_level, format='%(asctime)s - %(levelname)s: %(message)s')
 
 
 def process_single_resource(args):
@@ -218,7 +222,12 @@ def process_resources(
     failed = 0
     errors = []
 
-    with Pool(processes=max_workers) as pool:
+    log_level = logging.getLogger().getEffectiveLevel()
+    with get_context("spawn").Pool(
+        processes=max_workers,
+        initializer=_init_worker,
+        initargs=(log_level,),
+    ) as pool:
         if use_progress_bar:
             # Interactive mode with progress bar
             results = list(tqdm(
