@@ -2,7 +2,7 @@ import logging
 import sys
 import click
 from pathlib import Path
-from multiprocessing import Pool, cpu_count
+from multiprocessing import get_context, cpu_count
 from tqdm import tqdm
 
 from digital_land import __version__ as dl_version
@@ -218,7 +218,7 @@ def process_resources(
     failed = 0
     errors = []
 
-    with Pool(processes=max_workers) as pool:
+    with get_context("spawn").Pool(processes=max_workers) as pool:
         if use_progress_bar:
             # Interactive mode with progress bar
             results = list(tqdm(
