@@ -98,9 +98,8 @@ if [ -n "$DOWNLOAD_THREADS" ]; then
     DOWNLOAD_CMD="$DOWNLOAD_CMD --max-threads $DOWNLOAD_THREADS"
 fi
 
-# Add verbose flag if needed
-if [ -n "$VERBOSE" ]; then
-    DOWNLOAD_CMD="$DOWNLOAD_CMD --verbose"
+if [ -n "$REPROCESS" ]; then
+    DOWNLOAD_CMD="$DOWNLOAD_CMD --reprocess"
 fi
 
 echo "Downloading resources..."

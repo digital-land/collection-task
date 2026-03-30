@@ -3,6 +3,10 @@
 import logging
 from typing import Dict, List, Optional, Tuple
 
+from digital_land import __version__ as dl_version
+from digital_land.utils.hash_utils import hash_directory
+from digital_land.utils.dataset_resource_utils import resource_needs_processing
+
 logger = logging.getLogger(__name__)
 
 
@@ -83,6 +87,61 @@ def apply_offset_and_limit(
         dataset_resource_pairs = dataset_resource_pairs[:limit]
 
     return dataset_resource_pairs
+
+
+def select_resources_to_process(
+    dataset_resource_map: Dict[str, List[str]],
+    dataset_resource_dir: str,
+    pipeline_dir: str,
+    specification_dir: str,
+    dataset: Optional[str] = None,
+    offset: Optional[int] = None,
+    limit: Optional[int] = None,
+    reprocess: bool = False,
+) -> List[Tuple[str, str]]:
+    """Select the (dataset, resource) pairs to process or download.
+
+    Applies the same logic in both download_resources and transform_resources
+    so the two steps always operate on the same set of resources:
+
+    1. Build the full list of (dataset, resource) pairs
+    2. If not reprocess: filter to only those whose dataset-resource log is
+       out-of-date (different code version, config hash, or spec hash)
+    3. Apply offset/limit to the resulting list
+
+    Args:
+        dataset_resource_map: Dictionary mapping datasets to lists of resources
+        dataset_resource_dir: Path to dataset resource logs
+        pipeline_dir: Path to pipeline config directory (used for config hash)
+        specification_dir: Path to specification directory (used for spec hash)
+        dataset: Optional dataset name to filter to
+        offset: Optional offset into the final list
+        limit: Optional maximum number of pairs to return
+        reprocess: If True, skip the dataset-resource log check
+
+    Returns:
+        List of (dataset, resource) tuples to process
+    """
+    pairs = build_dataset_resource_pairs(dataset_resource_map, dataset=dataset)
+
+    if not reprocess:
+        config_hash = hash_directory(pipeline_dir)
+        specification_hash = hash_directory(specification_dir)
+        before_skip = len(pairs)
+        pairs = [
+            (ds, resource) for ds, resource in pairs
+            if resource_needs_processing(
+                dataset_resource_dir, ds, resource,
+                dl_version, config_hash, specification_hash,
+            )
+        ]
+        skipped = before_skip - len(pairs)
+        logger.info(
+            f"Skipping {skipped} already up-to-date resources, "
+            f"{len(pairs)} to process"
+        )
+
+    return apply_offset_and_limit(pairs, offset=offset, limit=limit, dataset=dataset)
 
 
 def build_retired_resources_set(old_resource_entries: List[Dict]) -> set:
