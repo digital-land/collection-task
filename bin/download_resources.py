@@ -7,18 +7,20 @@ from digital_land.collection import Collection
 from collection_task.downloading import download_files
 from collection_task.filtering import (
     build_redirect_map,
-    build_dataset_resource_pairs,
-    apply_offset_and_limit,
+    select_resources_to_process,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def download_resources(collection, collection_dir: str, bucket=None, base_url=None, collection_name=None, dataset=None, transformaiton_offset=None, transformation_limit=None, max_threads=4) -> None:
-    """Download resources for a collection., can limit and offset based on how many. transformation
-    rresource numberr may differ to
+def download_resources(collection, collection_dir: str, bucket=None, base_url=None, collection_name=None, dataset=None, transformaiton_offset=None, transformation_limit=None, dataset_resource_dir="var/dataset-resource/", pipeline_dir="pipeline/", specification_dir="specification/", reprocess=False, max_threads=4) -> None:
+    """Download resources for a collection.
+
+    Uses the same selection logic as transform_resources (via select_resources_to_process)
+    so only resources that will actually be transformed are downloaded.
+
     Args:
-        collection: The collection object or None to load from collection_dir
+        collection: Unused, kept for backwards compatibility.
         collection_dir (str): The directory of the collection.
         bucket (str, optional): S3 bucket name to download from. If provided, will construct s3:// URLs.
         base_url (str, optional): Base URL for HTTP downloads (e.g., https://files.planning.data.gov.uk/).
@@ -26,6 +28,10 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
         dataset (str, optional): Filter resources to only this dataset.
         transformaiton_offset (int, optional): Offset for filtering resources.
         transformation_limit (int, optional): Limit for filtering resources.
+        dataset_resource_dir (str, optional): Path to dataset resource logs (used for skip check).
+        pipeline_dir (str, optional): Path to pipeline config (used for config hash).
+        specification_dir (str, optional): Path to specification (used for specification hash).
+        reprocess (bool, optional): If True, skip the dataset-resource log check and download all resources.
         max_threads (int, optional): Maximum number of concurrent download threads. Defaults to 4.
     """
     # Validate that either bucket or base_url is provided
@@ -44,19 +50,21 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     dataset_resource_map = collection.dataset_resource_map()
 
     redirect = build_redirect_map(collection.old_resource.entries)
-    dataset_resource_pairs = build_dataset_resource_pairs(dataset_resource_map, dataset=dataset)
-    total_pairs = len(dataset_resource_pairs)
-    dataset_resource_pairs = apply_offset_and_limit(
-        dataset_resource_pairs,
+    dataset_resource_pairs = select_resources_to_process(
+        dataset_resource_map=dataset_resource_map,
+        dataset_resource_dir=dataset_resource_dir,
+        pipeline_dir=pipeline_dir,
+        specification_dir=specification_dir,
+        dataset=dataset,
         offset=transformaiton_offset,
         limit=transformation_limit,
-        dataset=dataset,
+        reprocess=reprocess,
     )
 
     # Extract unique resources to download (a resource only needs to be downloaded once)
     resources_to_download = list(set([res for _, res in dataset_resource_pairs]))
 
-    logger.info(f"Downloading resources for {len(dataset_resource_pairs)} transformation tasks (out of {total_pairs} total)")
+    logger.info(f"Downloading resources for {len(dataset_resource_pairs)} transformation tasks")
 
     # Build download map with URLs and output paths
     download_map = {}
@@ -132,6 +140,27 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     help="Limit for filtering resources"
 )
 @click.option(
+    "--dataset-resource-dir",
+    default="var/dataset-resource/",
+    help="Path to dataset resource logs (used to skip already up-to-date resources)"
+)
+@click.option(
+    "--pipeline-dir",
+    default="pipeline/",
+    help="Path to the pipeline configuration directory (used for config hash)"
+)
+@click.option(
+    "--specification-dir",
+    default="specification/",
+    help="Path to the specification directory (used for specification hash)"
+)
+@click.option(
+    "--reprocess",
+    is_flag=True,
+    default=False,
+    help="Download all resources, ignoring the dataset-resource skip check"
+)
+@click.option(
     "--max-threads",
     default=4,
     type=int,
@@ -147,7 +176,7 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     is_flag=True,
     help="Enable debug logging"
 )
-def run_command(collection_dir, bucket, base_url, collection_name, dataset, offset, limit, max_threads, quiet, debug):
+def run_command(collection_dir, bucket, base_url, collection_name, dataset, offset, limit, dataset_resource_dir, pipeline_dir, specification_dir, reprocess, max_threads, quiet, debug):
     """Download resources for a collection from S3 or HTTP(S) URLs.
 
     Either --bucket or --base-url must be provided.
@@ -184,7 +213,11 @@ def run_command(collection_dir, bucket, base_url, collection_name, dataset, offs
             dataset=dataset,
             transformaiton_offset=offset,
             transformation_limit=limit,
-            max_threads=max_threads
+            dataset_resource_dir=dataset_resource_dir,
+            pipeline_dir=pipeline_dir,
+            specification_dir=specification_dir,
+            reprocess=reprocess,
+            max_threads=max_threads,
         )
         click.echo("Download complete!")
     except ValueError as e:

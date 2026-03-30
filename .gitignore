@@ -25,3 +25,4 @@
 # python
 .venv
 __pycache__/
+*.egg-info/
