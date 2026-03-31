@@ -114,6 +114,7 @@ def process_resources(
     limit=None,
     max_workers=None,
     reprocess=False,
+    state_path=None,
 ):
     """Process resources using multiprocessing.
 
@@ -149,6 +150,7 @@ def process_resources(
         offset=offset,
         limit=limit,
         reprocess=reprocess,
+        state_path=state_path,
     )
 
     tasks = []

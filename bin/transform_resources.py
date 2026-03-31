@@ -88,6 +88,12 @@ logger = logging.getLogger(__name__)
     help="Path to the specification directory"
 )
 @click.option(
+    "--state-path",
+    default=None,
+    type=click.Path(exists=True),
+    help="Path to state.json for stable ordered resource list"
+)
+@click.option(
     "--reprocess",
     is_flag=True,
     default=False,
@@ -119,6 +125,7 @@ def run_command(
     offset,
     limit,
     max_workers,
+    state_path,
     reprocess,
     quiet,
     debug
@@ -148,6 +155,7 @@ def run_command(
             offset=offset,
             limit=limit,
             max_workers=max_workers,
+            state_path=state_path,
             reprocess=reprocess,
         )
 

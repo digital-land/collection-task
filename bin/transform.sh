@@ -38,10 +38,34 @@ make init
 echo "Step 3: Building collection database..."
 make collection
 
-# Step 4: Download dataset resource logs (used to skip already up-to-date resources)
+# Step 4: Download state.json (used for stable batch ordering) and dataset resource logs
+# Use local state.json if it exists, allowing manual edits
+STATE_PATH=${STATE_PATH:-"state.json"}
+
+if [ -f "$STATE_PATH" ]; then
+    echo "Step 4a: Using existing state.json at $STATE_PATH"
+else
+    echo "Step 4a: Downloading state.json..."
+    if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+        aws s3 cp "s3://${COLLECTION_DATASET_BUCKET_NAME}/${COLLECTION_NAME}-collection/state.json" "$STATE_PATH"
+    elif [ -n "$DATASTORE_URL" ]; then
+        base=$(echo "$DATASTORE_URL" | sed 's:/*$::')
+        curl --fail -o "$STATE_PATH" "${base}/${COLLECTION_NAME}-collection/state.json"
+    else
+        echo "Error: Either COLLECTION_DATASET_BUCKET_NAME or DATASTORE_URL must be set"
+        exit 1
+    fi
+
+    if [ ! -f "$STATE_PATH" ]; then
+        echo "Error: Failed to download state.json"
+        exit 1
+    fi
+fi
+
+# Download dataset resource logs (used to skip already up-to-date resources within a batch)
 # Skipped when REPROCESS is set - logs will be freshly written by the transform step
 if [ -z "$REPROCESS" ]; then
-    echo "Step 4: Downloading dataset resource logs..."
+    echo "Step 4b: Downloading dataset resource logs..."
 
     DATASET_RESOURCE_CMD="python bin/download_dataset_resource.py --collection-dir $COLLECTION_DIR --collection-name $COLLECTION_NAME --dataset-resource-dir $DATASET_RESOURCE_DIR"
 
@@ -61,14 +85,14 @@ if [ -z "$REPROCESS" ]; then
     echo "Command: $DATASET_RESOURCE_CMD"
     eval $DATASET_RESOURCE_CMD
 else
-    echo "Step 4: Skipping dataset resource log download - REPROCESS is set, logs will be written fresh"
+    echo "Step 4b: Skipping dataset resource log download - REPROCESS is set, logs will be written fresh"
 fi
 
 # Step 5: Download resources
 echo "Step 5: Downloading resources..."
 
 # Build the download command
-DOWNLOAD_CMD="python bin/download_resources.py --collection-dir $COLLECTION_DIR"
+DOWNLOAD_CMD="python bin/download_resources.py --collection-dir $COLLECTION_DIR --state-path $STATE_PATH"
 
 # Add bucket or base URL (bucket takes precedence, matching makefile convention)
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
@@ -111,7 +135,7 @@ echo "Resources downloaded successfully"
 # Step 6: Transform resources using Python multiprocessing
 echo "Step 6: Transforming resources..."
 
-TRANSFORM_CMD="python bin/transform_resources.py --collection-dir $COLLECTION_DIR"
+TRANSFORM_CMD="python bin/transform_resources.py --collection-dir $COLLECTION_DIR --state-path $STATE_PATH"
 
 # Add directory parameters
 TRANSFORM_CMD="$TRANSFORM_CMD --pipeline-dir $PIPELINE_DIR"

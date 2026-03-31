@@ -1,5 +1,6 @@
 """Filtering and resource management functions for collection tasks."""
 
+import json
 import logging
 from typing import Dict, List, Optional, Tuple
 
@@ -89,6 +90,31 @@ def apply_offset_and_limit(
     return dataset_resource_pairs
 
 
+def load_state_resources(state_path: str, dataset: str) -> List[Tuple[str, str]]:
+    """Load the ordered resource list for a dataset from a state.json file.
+
+    Args:
+        state_path: Path to state.json
+        dataset: Dataset name to load resources for
+
+    Returns:
+        List of (dataset, resource) tuples in the order defined by state.json
+
+    Raises:
+        FileNotFoundError: If state_path does not exist
+        KeyError: If state.json does not contain 'transform_resources' or dataset is not found
+    """
+    with open(state_path) as f:
+        state = json.load(f)
+
+    transform_resources = state["transform_resources"]
+
+    if dataset not in transform_resources:
+        raise KeyError(f"Dataset '{dataset}' not found in state.json transform_resources")
+
+    return [(dataset, resource) for resource in transform_resources[dataset]]
+
+
 def select_resources_to_process(
     dataset_resource_map: Dict[str, List[str]],
     dataset_resource_dir: str,
@@ -98,16 +124,18 @@ def select_resources_to_process(
     offset: Optional[int] = None,
     limit: Optional[int] = None,
     reprocess: bool = False,
+    state_path: Optional[str] = None,
 ) -> List[Tuple[str, str]]:
     """Select the (dataset, resource) pairs to process or download.
 
-    Applies the same logic in both download_resources and transform_resources
-    so the two steps always operate on the same set of resources:
+    If state_path is provided, the stable ordered list from state.json is used
+    as the base for offset/limit. Otherwise falls back to building from
+    dataset_resource_map. The skip check (resource_needs_processing) is always
+    applied after offset/limit so batch boundaries remain stable.
 
-    1. Build the full list of (dataset, resource) pairs
-    2. If not reprocess: filter to only those whose dataset-resource log is
-       out-of-date (different code version, config hash, or spec hash)
-    3. Apply offset/limit to the resulting list
+    1. Build the ordered list (from state.json if available, else dataset_resource_map)
+    2. Apply offset/limit to get a stable batch slice
+    3. If not reprocess: filter the slice to only those needing processing
 
     Args:
         dataset_resource_map: Dictionary mapping datasets to lists of resources
@@ -115,14 +143,23 @@ def select_resources_to_process(
         pipeline_dir: Path to pipeline config directory (used for config hash)
         specification_dir: Path to specification directory (used for spec hash)
         dataset: Optional dataset name to filter to
-        offset: Optional offset into the final list
+        offset: Optional offset into the stable ordered list
         limit: Optional maximum number of pairs to return
         reprocess: If True, skip the dataset-resource log check
+        state_path: Optional path to state.json for stable ordered resource list
 
     Returns:
         List of (dataset, resource) tuples to process
     """
-    pairs = build_dataset_resource_pairs(dataset_resource_map, dataset=dataset)
+    if state_path:
+        if not dataset:
+            raise ValueError("dataset is required when state_path is provided")
+        pairs = load_state_resources(state_path, dataset=dataset)
+    else:
+        pairs = build_dataset_resource_pairs(dataset_resource_map, dataset=dataset)
+
+    # Apply offset/limit to stable list first so batch boundaries never shift
+    pairs = apply_offset_and_limit(pairs, offset=offset, limit=limit, dataset=dataset)
 
     if not reprocess:
         config_hash = hash_directory(pipeline_dir)
@@ -141,7 +178,7 @@ def select_resources_to_process(
             f"{len(pairs)} to process"
         )
 
-    return apply_offset_and_limit(pairs, offset=offset, limit=limit, dataset=dataset)
+    return pairs
 
 
 def build_retired_resources_set(old_resource_entries: List[Dict]) -> set:
