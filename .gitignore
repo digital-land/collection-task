@@ -16,6 +16,8 @@
 /expectations
 /task/metadata.json
 /metadata.json
+/task/state.json
+/state.json
 /task/specification
 /specification
 /task/issue

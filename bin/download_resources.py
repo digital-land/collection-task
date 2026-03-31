@@ -13,7 +13,7 @@ from collection_task.filtering import (
 logger = logging.getLogger(__name__)
 
 
-def download_resources(collection, collection_dir: str, bucket=None, base_url=None, collection_name=None, dataset=None, transformaiton_offset=None, transformation_limit=None, dataset_resource_dir="var/dataset-resource/", pipeline_dir="pipeline/", specification_dir="specification/", reprocess=False, max_threads=4) -> None:
+def download_resources(collection, collection_dir: str, bucket=None, base_url=None, collection_name=None, dataset=None, transformaiton_offset=None, transformation_limit=None, dataset_resource_dir="var/dataset-resource/", pipeline_dir="pipeline/", specification_dir="specification/", reprocess=False, max_threads=4, state_path=None) -> None:
     """Download resources for a collection.
 
     Uses the same selection logic as transform_resources (via select_resources_to_process)
@@ -59,6 +59,7 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
         offset=transformaiton_offset,
         limit=transformation_limit,
         reprocess=reprocess,
+        state_path=state_path,
     )
 
     # Extract unique resources to download (a resource only needs to be downloaded once)
@@ -155,6 +156,12 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     help="Path to the specification directory (used for specification hash)"
 )
 @click.option(
+    "--state-path",
+    default=None,
+    type=click.Path(exists=True),
+    help="Path to state.json for stable ordered resource list"
+)
+@click.option(
     "--reprocess",
     is_flag=True,
     default=False,
@@ -176,7 +183,7 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     is_flag=True,
     help="Enable debug logging"
 )
-def run_command(collection_dir, bucket, base_url, collection_name, dataset, offset, limit, dataset_resource_dir, pipeline_dir, specification_dir, reprocess, max_threads, quiet, debug):
+def run_command(collection_dir, bucket, base_url, collection_name, dataset, offset, limit, dataset_resource_dir, pipeline_dir, specification_dir, state_path, reprocess, max_threads, quiet, debug):
     """Download resources for a collection from S3 or HTTP(S) URLs.
 
     Either --bucket or --base-url must be provided.
@@ -218,6 +225,7 @@ def run_command(collection_dir, bucket, base_url, collection_name, dataset, offs
             specification_dir=specification_dir,
             reprocess=reprocess,
             max_threads=max_threads,
+            state_path=state_path,
         )
         click.echo("Download complete!")
     except ValueError as e:
