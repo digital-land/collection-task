@@ -1,5 +1,5 @@
 #!/bin/bash
-# Load script - builds a dataset package directly from pre-built parquet tables in S3
+# Load script - builds a dataset package directly from Delta tables in S3
 # Requires S3 access via PARQUET_DATASETS_BUCKET
 
 set -e
