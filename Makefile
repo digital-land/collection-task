@@ -33,7 +33,10 @@ include makerules/development.mk
 include makerules/collection.mk
 include makerules/pipeline.mk
 
-make clean::
+run::
+	COLLECTION_NAME=$(COLLECTION_NAME) TRANSFORMED_JOBS=$(TRANSFORMED_JOBS) ./bin/run.sh
+
+clean::
 	make clobber
 	rm -rf performance
 	rm -rf collection
