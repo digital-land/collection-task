@@ -30,7 +30,7 @@ TABLE_COLUMNS = {
         "line_number", "dataset", "resource", "value", "message",
     ],
     "column_field": [
-        "dataset", "resource", "column", "field", "start_date", "end_date", "entry_date",
+        "dataset", "resource", "column", "field", "entry_date",
     ],
     "dataset_resource": [
         "dataset", "resource", "start_date", "end_date", "entry_date", "entity_count",
