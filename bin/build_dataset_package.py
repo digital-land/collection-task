@@ -33,7 +33,7 @@ TABLE_COLUMNS = {
         "dataset", "resource", "column", "field", "entry_date",
     ],
     "dataset_resource": [
-        "dataset", "resource", "start_date", "end_date", "entry_date", "entity_count",
+        "dataset", "resource", "entry_date", "entity_count",
         "entry_count", "line_count", "mime_type", "internal_path", "internal_mime_type",
     ],
 }
