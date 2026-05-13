@@ -45,7 +45,7 @@ make run COLLECTION_NAME=<insert_collection_name_here> TRANSFORMED_JOBS=8
 
 :memo: **Note:** TRANSFORMED_JOBS=8 is an optional extra to speed up the transform step on large datasets. This uses bin/run.sh which exists only for running collect-task locally.
 
-Alterntaivley you can run each of the four sections of a collect-task separatly:
+Alternatively you can run each of the four sections of a collect-task separately:
 
 ```
 make collect
@@ -109,7 +109,7 @@ Whichever runs last wins. So:
 ### Docker
 :warning: **Warning:** This currently errors but a [tech-debt ticket](https://github.com/orgs/digital-land/projects/15/views/3?pane=issue&itemId=186630905&issue=digital-land%7Ccollection-task%7C53) has been made to look into fixing it.
 
-Given that docker is installed, docker compose can be used to run the process for a given colleciton. Volumes are set up to view outputs but this can cause it to be slow running on some machines. This can be ran using:
+Given that docker is installed, docker compose can be used to run the process for a given collection. Volumes are set up to view outputs but this can cause it to be slow running on some machines. This can be ran using:
 
 ```
 make compose-up
