@@ -9,9 +9,9 @@ import sqlite3
 from pathlib import Path
 
 import pyarrow as pa
-import pyarrow.parquet as pq
 import pytest
 from click.testing import CliRunner
+from deltalake import write_deltalake
 
 from build_dataset_package import run_command
 from digital_land.specification import Specification
@@ -28,9 +28,9 @@ OTHER_DATASET = "conservation-area"
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _write_parquet(path: Path, table: pa.Table):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, path)
+def _write_delta(path: Path, table: pa.Table):
+    path.mkdir(parents=True, exist_ok=True)
+    write_deltalake(str(path), table, mode="append")
 
 
 # ---------------------------------------------------------------------------
@@ -47,23 +47,22 @@ def specification_dir(tmp_path_factory):
 
 @pytest.fixture()
 def parquet_dir(tmp_path):
-    """Build a minimal Hive-partitioned parquet tree under tmp_path.
+    """Build a minimal Delta table tree under tmp_path.
 
     Two datasets are written so tests can verify the dataset filter works.
-    The dataset column is derived from the directory name by DuckDB's
-    hive_partitioning — it is not a data column inside the parquet files.
+    dataset is a real column in each Delta table (not a hive partition directory).
     """
     null_str2 = pa.array([None, None], type=pa.string())
     null_str1 = pa.array([None], type=pa.string())
 
     # entity table — two rows for DATASET, one decoy row for OTHER_DATASET
-    _write_parquet(
-        tmp_path / "entity" / f"dataset={DATASET}" / "data.parquet",
+    _write_delta(
+        tmp_path / "entity",
         pa.table({
+            "dataset":           pa.array([DATASET, DATASET], type=pa.string()),
             "end_date":          null_str2,
             "entity":            pa.array([1, 2], type=pa.int64()),
             "entry_date":        null_str2,
-            "geojson":           null_str2,
             "geometry":          null_str2,
             "json":              null_str2,
             "name":              pa.array(["Entity One", "Entity Two"], type=pa.string()),
@@ -76,13 +75,13 @@ def parquet_dir(tmp_path):
             "typology":          null_str2,
         }),
     )
-    _write_parquet(
-        tmp_path / "entity" / f"dataset={OTHER_DATASET}" / "data.parquet",
+    _write_delta(
+        tmp_path / "entity",
         pa.table({
+            "dataset":           pa.array([OTHER_DATASET], type=pa.string()),
             "end_date":          null_str1,
             "entity":            pa.array([99], type=pa.int64()),
             "entry_date":        null_str1,
-            "geojson":           null_str1,
             "geometry":          null_str1,
             "json":              null_str1,
             "name":              pa.array(["Should Not Appear"], type=pa.string()),
@@ -97,9 +96,10 @@ def parquet_dir(tmp_path):
     )
 
     # fact table — two rows for DATASET only
-    _write_parquet(
-        tmp_path / "fact" / f"dataset={DATASET}" / "data.parquet",
+    _write_delta(
+        tmp_path / "fact",
         pa.table({
+            "dataset":          pa.array([DATASET, DATASET], type=pa.string()),
             "entity":           pa.array([1, 2], type=pa.int64()),
             "entry_date":       null_str2,
             "fact":             pa.array(["fact-1", "fact-2"], type=pa.string()),
@@ -107,6 +107,38 @@ def parquet_dir(tmp_path):
             "priority":         pa.array([None, None], type=pa.int64()),
             "reference_entity": null_str2,
             "value":            pa.array(["Entity One", "ref-1"], type=pa.string()),
+        }),
+    )
+
+    # dataset_resource table
+    _write_delta(
+        tmp_path / "dataset_resource",
+        pa.table({
+            "dataset":           pa.array([DATASET], type=pa.string()),
+            "resource":          pa.array(["abc123"], type=pa.string()),
+            "start_date":        null_str1,
+            "end_date":          null_str1,
+            "entry_date":        null_str1,
+            "entity_count":      pa.array([None], type=pa.int64()),
+            "entry_count":       pa.array([None], type=pa.int64()),
+            "line_count":        pa.array([None], type=pa.int64()),
+            "mime_type":         null_str1,
+            "internal_path":     null_str1,
+            "internal_mime_type": null_str1,
+        }),
+    )
+
+    # column_field table
+    _write_delta(
+        tmp_path / "column_field",
+        pa.table({
+            "dataset":    pa.array([DATASET], type=pa.string()),
+            "resource":   pa.array(["abc123"], type=pa.string()),
+            "column":     pa.array(["Name"], type=pa.string()),
+            "field":      pa.array(["name"], type=pa.string()),
+            "start_date": null_str1,
+            "end_date":   null_str1,
+            "entry_date": null_str1,
         }),
     )
 
@@ -123,20 +155,6 @@ def collection_dir(tmp_path, specification_dir):
     spec = Specification(str(specification_dir))
     entity_min = int(spec.get_dataset_entity_min(DATASET))
     entity_max = int(spec.get_dataset_entity_max(DATASET))
-
-    base = tmp_path / "collection" / f"{COLLECTION_NAME}-collection"
-
-    # dataset-resource
-    dr_dir = base / "var" / "dataset-resource" / DATASET
-    dr_dir.mkdir(parents=True)
-    (dr_dir / "resource1.csv").write_text("resource,dataset\nabc123,brownfield-land\n")
-
-    # column-field
-    cf_dir = base / "var" / "column-field" / DATASET
-    cf_dir.mkdir(parents=True)
-    (cf_dir / "resource1.csv").write_text(
-        "dataset,resource,column,field\nbrownfield-land,abc123,Name,name\n"
-    )
 
     # old-entity — one row in range, one outside
     oe_dir = tmp_path / "collection" / "config" / "pipeline" / COLLECTION_NAME
@@ -264,7 +282,7 @@ def test_tables_with_no_parquet_data_remain_empty(parquet_dir, collection_dir, s
 
 
 def test_dataset_resource_csv_is_loaded(parquet_dir, collection_dir, specification_dir, tmp_path):
-    """dataset-resource rows from the collection CSV should be loaded."""
+    """dataset-resource rows from the Delta table should be loaded."""
     output_path = tmp_path / "output" / f"{DATASET}.sqlite3"
 
     result = CliRunner().invoke(run_command, [
@@ -285,7 +303,7 @@ def test_dataset_resource_csv_is_loaded(parquet_dir, collection_dir, specificati
 
 
 def test_column_field_csv_is_loaded(parquet_dir, collection_dir, specification_dir, tmp_path):
-    """column-field rows from the collection CSV should be loaded."""
+    """column-field rows from the Delta table should be loaded."""
     output_path = tmp_path / "output" / f"{DATASET}.sqlite3"
 
     result = CliRunner().invoke(run_command, [

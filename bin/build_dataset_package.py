@@ -11,9 +11,9 @@ from digital_land.specification import Specification
 
 logger = logging.getLogger(__name__)
 
-# Known columns present in each Hive-partitioned parquet table.
+# Known columns present in each Delta table.
 # fact, fact_resource and issue do not have start_date or end_date.
-PARQUET_COLUMNS = {
+TABLE_COLUMNS = {
     "entity": [
         "dataset", "end_date", "entity", "entry_date", "geometry",
         "json", "name", "organisation_entity", "point", "prefix", "quality",
@@ -29,18 +29,22 @@ PARQUET_COLUMNS = {
         "entity", "entry_date", "entry_number", "field", "issue_type",
         "line_number", "dataset", "resource", "value", "message",
     ],
+    "column_field": [
+        "dataset", "resource", "column", "field", "entry_date",
+    ],
+    "dataset_resource": [
+        "dataset", "resource", "entry_date", "entity_count",
+        "entry_count", "line_count", "mime_type", "internal_path", "internal_mime_type",
+    ],
 }
 
 # CSV-sourced tables — schema still read dynamically from SQLite after create_database()
-CSV_SQLITE_TABLES = ["dataset_resource", "column_field", "old_entity"]
+CSV_SQLITE_TABLES = ["old_entity"]
 
 
-def _csv_sources(collection_data_path, collection, dataset, entity_min, entity_max):
+def _csv_sources(collection_data_path, collection, entity_min, entity_max):
     """Return (sqlite_table, path, where_clause) tuples for tables loaded from CSV."""
-    base = f"{collection_data_path}/{collection}-collection"
     return [
-        ("dataset_resource", f"{base}/var/dataset-resource/{dataset}/*.csv", None),
-        ("column_field", f"{base}/var/column-field/{dataset}/*.csv", None),
         (
             "old_entity",
             f"{collection_data_path}/config/pipeline/{collection}/old-entity.csv",
@@ -132,41 +136,38 @@ def build_dataset_package(
     logger.info(f"Loading tables from {base_path} into {output_path}")
     conn = duckdb.connect()
     conn.execute("INSTALL httpfs; LOAD httpfs;")
+    conn.execute("INSTALL delta; LOAD delta;")
     conn.execute("INSTALL sqlite; LOAD sqlite;")
     if isinstance(base_path, S3Path) or isinstance(AnyPath(collection_data_path), S3Path):
         conn.execute("CREATE SECRET (TYPE S3, PROVIDER CREDENTIAL_CHAIN);")
     conn.execute(f"ATTACH DATABASE '{output_path}' AS sqlite_db (TYPE SQLITE);")
 
-    # Load parquet tables — scan only the target dataset's partition directory
-    # to avoid hive partition schema mismatches across different dataset partitions
-    for table_name, cols in PARQUET_COLUMNS.items():
-        dataset_partition_path = base_path / table_name / f"dataset={dataset}"
+    # Load delta tables — each table is a Delta Lake table at {base_path}/{table_name}/
+    # partitioned by dataset. Filter to the target dataset via WHERE clause.
+    for table_name, cols in TABLE_COLUMNS.items():
+        delta_table_path = base_path / table_name
+        delta_log_path = delta_table_path / "_delta_log"
 
-        if not dataset_partition_path.exists():
-            logger.debug(f"No directory at {dataset_partition_path}, skipping '{table_name}'")
+        if not delta_log_path.exists():
+            logger.debug(f"No Delta table at {delta_table_path}, skipping '{table_name}'")
             continue
 
-        scan_path = f"{dataset_partition_path}/**/*.parquet"
-        # dataset is a virtual hive column — supply it as a literal in the same
-        # position to keep col_list and select_list aligned
+        scan_path = str(delta_table_path)
         col_list = ", ".join(f'"{c}"' for c in cols)
-        select_list = ", ".join(
-            f"'{dataset}' AS \"dataset\"" if c == "dataset" else f'"{c}"'
-            for c in cols
-        )
 
-        logger.info(f"Loading parquet files into '{table_name}'")
+        logger.info(f"Loading delta table '{table_name}' for dataset '{dataset}'")
         conn.execute(f"""
             INSERT INTO sqlite_db."{table_name}" ({col_list})
-            SELECT {select_list}
-            FROM parquet_scan('{scan_path}')
+            SELECT {col_list}
+            FROM delta_scan('{scan_path}')
+            WHERE dataset = '{dataset}'
         """)
 
     # Load CSV tables from the collection data path
     if collection_data_path and collection:
         logger.info(f"Loading CSV tables from {collection_data_path}")
         for sqlite_table, path, where_clause in _csv_sources(
-            collection_data_path, collection, dataset, entity_min, entity_max
+            collection_data_path, collection, entity_min, entity_max
         ):
             _load_csv_table(conn, sqlite_table, path, csv_table_columns, where_clause)
     else:

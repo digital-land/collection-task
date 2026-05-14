@@ -8,6 +8,7 @@
 pytest>=8.0.0
 pytest-mock>=3.12.0
 pyarrow>=14.0.0
+deltalake
 
 # Code formatting and linting
 black>=24.0.0
