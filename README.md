@@ -65,7 +65,7 @@ gmake dataset   # note: gmake not make for this step
 Option 1: 
 ```
 make clobber
-````
+```
 This will remove the pipeline output directories the files and folders generated during the transform/dataset steps, but will keep the downloaded collection data.
 
 :memo: **Note:** You would use this when you want to re-run `make transformed` and `gmake dataset`
@@ -75,7 +75,7 @@ Option 2:
 make Clean
 ```
 This does everything `make clobber` does but also removes logs, resouces csvs, state.json, downloaded pipeline config csvs and collection config csvs.
-```
+
 :memo: **Note:** You would do this when you want to re-run a pipeline totally from scratch.
 
 
@@ -104,6 +104,15 @@ Whichever runs last wins. So:
 * `make init` after `make dev` → back to GitHub
 * `make dev` after `make init` → back to your local repo
 
+## Example pipelines to run
+
+These are good choices when you want to quickly verify the pipeline is working correctly.
+
+| Collection | Approx. time | Notes |
+|---|---|---|
+| `area-of-outstanding-natural-beauty` | ~5 mins | Minimal — 2 expectations, no geometry checks. Good for a quick smoke test. |
+| `ancient-woodland` | ~12 mins | Small dataset, used throughout the docs as the default example. |
+| `brownfield-site` | ~20 mins | Larger (342 expectations) but all fast `count_deleted_entities` checks — good for testing expectations run correctly at scale. |
 
 
 ### Docker
