@@ -161,6 +161,13 @@ digital-land --dataset "$DATASET_NAME" --pipeline-dir "$PIPELINE_DIR" --specific
     "$FLATTENED_DIR"
 echo "Dataset flattened files created"
 
+# Fetch previous expectations from S3, to retain historic results on days expectations are skipped
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo "Fetching previous expectation results from S3..."
+    aws s3 sync s3://${COLLECTION_DATASET_BUCKET_NAME}/${OUTPUT_LOG_DIR}expectation/ ${OUTPUT_LOG_DIR}expectation/ --no-progress
+fi
+
+
 echo "[5/5] Run dataset expectations..."
 digital-land expectations-dataset-checkpoint \
     --dataset "$DATASET_NAME" \
