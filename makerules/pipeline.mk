@@ -258,7 +258,7 @@ endif
 
 save-expectations::
 	@mkdir -p $(OUTPUT_LOG_DIR)
-	aws s3 cp $(OUTPUT_LOG_DIR)expectation/dataset=$(DATASET_NAME)/$(DATASET_NAME).parquet s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(OUTPUT_LOG_DIR)expectation/dataset=$(DATASET_NAME)/$(DATASET_NAME).parquet
+	aws s3 sync $(OUTPUT_LOG_DIR) s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(OUTPUT_LOG_DIR) --no-progress
 
 save-performance::
 	@mkdir -p $(PERFORMANCE_DIR)
