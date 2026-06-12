@@ -1,4 +1,5 @@
 FROM python:3.8-slim-bookworm
+ARG DIGITAL_LAND_PYTHON_REF=main
 WORKDIR /
 RUN apt-get update
 RUN apt-get upgrade -y
@@ -17,6 +18,7 @@ RUN pip install pyproj
 RUN pip install csvkit
 RUN pip install awscli
 RUN pip install --upgrade pip
+RUN sed -i "s|pipeline.git@main|pipeline.git@${DIGITAL_LAND_PYTHON_REF}|" requirements.txt
 RUN pip3 install --upgrade -r requirements.txt
 
 CMD ["./bin/run.sh"]
