@@ -168,6 +168,24 @@ if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
 fi
 
 
+# Fetch the plan-timetable dataset, which the plan stage expectations need to work out whether a plan has reached the point where its fields become required.
+PLAN_TIMETABLE_DATASET="plan-timetable"
+if [ "$COLLECTION_NAME" = "local-plan" ] && [ "$DATASET_NAME" != "$PLAN_TIMETABLE_DATASET" ]; then
+    PLAN_TIMETABLE_PATH="${CACHE_DIR}${PLAN_TIMETABLE_DATASET}.sqlite3"
+    PLAN_TIMETABLE_KEY="${COLLECTION_NAME}-collection/${DATASET_DIR}${PLAN_TIMETABLE_DATASET}.sqlite3"
+    echo "Fetching $PLAN_TIMETABLE_DATASET for cross dataset expectations..."
+    mkdir -p "$CACHE_DIR"
+    if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+        aws s3 cp "s3://${COLLECTION_DATASET_BUCKET_NAME}/${PLAN_TIMETABLE_KEY}" \
+            "$PLAN_TIMETABLE_PATH" --no-progress \
+            || { echo "Warning: could not fetch $PLAN_TIMETABLE_DATASET, stage expectations will be skipped"; rm -f "$PLAN_TIMETABLE_PATH"; }
+    else
+        curl -qfsL "${DATASTORE_URL}${PLAN_TIMETABLE_KEY}" -o "$PLAN_TIMETABLE_PATH" \
+            || { echo "Warning: could not fetch $PLAN_TIMETABLE_DATASET, stage expectations will be skipped"; rm -f "$PLAN_TIMETABLE_PATH"; }
+    fi
+fi
+
+
 echo "[5/5] Run dataset expectations..."
 digital-land expectations-dataset-checkpoint \
     --dataset "$DATASET_NAME" \
