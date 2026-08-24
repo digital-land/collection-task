@@ -186,6 +186,25 @@ if [ "$COLLECTION_NAME" = "local-plan" ] && [ "$DATASET_NAME" != "$PLAN_TIMETABL
 fi
 
 
+# Fetch the listed-building dataset, which the listed-building-outline placeholder-name expectation joins against to recover the real Historic England name.
+LISTED_BUILDING_DATASET="listed-building"
+if [ "$DATASET_NAME" = "listed-building-outline" ]; then
+    LISTED_BUILDING_PATH="${CACHE_DIR}${LISTED_BUILDING_DATASET}.sqlite3"
+    LISTED_BUILDING_KEY="${COLLECTION_NAME}-collection/${DATASET_DIR}${LISTED_BUILDING_DATASET}.sqlite3"
+    echo "Fetching $LISTED_BUILDING_DATASET for cross dataset expectations..."
+    mkdir -p "$CACHE_DIR"
+    if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+        aws s3 cp "s3://${COLLECTION_DATASET_BUCKET_NAME}/${LISTED_BUILDING_KEY}" \
+            "$LISTED_BUILDING_PATH" --no-progress \
+            || { echo "Warning: could not fetch $LISTED_BUILDING_DATASET, placeholder name expectation will be skipped"; rm -f "$LISTED_BUILDING_PATH"; }
+    else
+        curl -qfsL "${DATASTORE_URL}${LISTED_BUILDING_KEY}" -o "$LISTED_BUILDING_PATH" \
+            || { echo "Warning: could not fetch $LISTED_BUILDING_DATASET, placeholder name expectation will be skipped"; rm -f "$LISTED_BUILDING_PATH"; }
+    fi
+fi
+
+
+
 echo "[5/5] Run dataset expectations..."
 digital-land expectations-dataset-checkpoint \
     --dataset "$DATASET_NAME" \
