@@ -23,7 +23,7 @@ PARQUET_COLUMNS = {
         "entity", "fact", "field", "entry_date", "priority", "reference_entity", "value",
     ],
     "fact_resource": [
-        "fact", "entry_date", "entry_number", "priority", "resource",
+        "fact", "entry_date", "entry_number", "priority", "resource", "entity", "field",
     ],
     "issue": [
         "entity", "entry_date", "entry_number", "field", "issue_type",
