@@ -35,11 +35,6 @@ logger = logging.getLogger(__name__)
     help="Path to the issue directory"
 )
 @click.option(
-    "--operational-issue-dir",
-    default="performance/operational_issue/",
-    help="Path to the operational issue directory"
-)
-@click.option(
     "--output-log-dir",
     default="log/",
     help="Path to the output log directory"
@@ -116,7 +111,6 @@ def run_command(
     cache_dir,
     transformed_dir,
     issue_dir,
-    operational_issue_dir,
     output_log_dir,
     column_field_dir,
     dataset_resource_dir,
@@ -146,7 +140,6 @@ def run_command(
             cache_dir=cache_dir,
             transformed_dir=transformed_dir,
             issue_dir=issue_dir,
-            operational_issue_dir=operational_issue_dir,
             output_log_dir=output_log_dir,
             column_field_dir=column_field_dir,
             dataset_resource_dir=dataset_resource_dir,

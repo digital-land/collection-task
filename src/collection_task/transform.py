@@ -44,15 +44,14 @@ def process_single_resource(args):
         # Build output directories
         transformed_dir = Path(config['transformed_dir']) / dataset
         issue_dir = Path(config['issue_dir']) / dataset
-        operational_issue_dir = Path(config['operational_issue_dir'])
         output_log_dir = Path(config['output_log_dir'])
         column_field_dir = Path(config['column_field_dir']) / dataset
         dataset_resource_dir = Path(config['dataset_resource_dir']) / dataset
         converted_resource_dir = Path(config['converted_resource_dir']) / dataset
 
         # Create directories
-        for directory in [transformed_dir, issue_dir, operational_issue_dir,
-                          output_log_dir, column_field_dir, dataset_resource_dir,
+        for directory in [transformed_dir, issue_dir, output_log_dir,
+                          column_field_dir, dataset_resource_dir,
                           converted_resource_dir]:
             directory.mkdir(parents=True, exist_ok=True)
 
@@ -75,7 +74,6 @@ def process_single_resource(args):
             output_path=output_path,
             collection_dir=config.get('collection_dir', 'collection/'),
             issue_dir=str(issue_dir),
-            operational_issue_dir=str(operational_issue_dir),
             column_field_dir=str(column_field_dir),
             dataset_resource_dir=str(dataset_resource_dir),
             converted_resource_dir=str(converted_resource_dir),
@@ -104,7 +102,6 @@ def process_resources(
     cache_dir="var/cache/",
     transformed_dir="transformed/",
     issue_dir="issue/",
-    operational_issue_dir="performance/operational_issue/",
     output_log_dir="log/",
     column_field_dir="var/column-field/",
     dataset_resource_dir="var/dataset-resource/",
@@ -124,7 +121,6 @@ def process_resources(
         cache_dir: Path to the cache directory
         transformed_dir: Path to the transformed output directory
         issue_dir: Path to the issue directory
-        operational_issue_dir: Path to the operational issue directory
         output_log_dir: Path to the output log directory
         column_field_dir: Path to the column field directory
         dataset_resource_dir: Path to the dataset resource directory
@@ -172,7 +168,6 @@ def process_resources(
             'collection_dir': collection_dir,
             'transformed_dir': transformed_dir,
             'issue_dir': issue_dir,
-            'operational_issue_dir': operational_issue_dir,
             'output_log_dir': output_log_dir,
             'column_field_dir': column_field_dir,
             'dataset_resource_dir': dataset_resource_dir,

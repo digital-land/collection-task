@@ -53,10 +53,6 @@ ifeq ($(PERFORMANCE_DIR),)
 PERFORMANCE_DIR=performance/
 endif
 
-ifeq ($(OPERATIONAL_ISSUE_DIR),)
-OPERATIONAL_ISSUE_DIR=$(PERFORMANCE_DIR)operational_issue/
-endif
-
 ifeq ($(COLUMN_FIELD_DIR),)
 COLUMN_FIELD_DIR=$(VAR_DIR)column-field/
 endif
@@ -119,7 +115,7 @@ SPECIFICATION_DIR = specification/
 endif
 
 define run-pipeline
-	mkdir -p $(@D) $(ISSUE_DIR)$(notdir $(@D)) $(OPERATIONAL_ISSUE_DIR) $(OUTPUT_LOG_DIR) $(COLUMN_FIELD_DIR)$(notdir $(@D)) $(DATASET_RESOURCE_DIR)$(notdir $(@D)) $(CONVERTED_RESOURCE_DIR)$(notdir $(@D))
+	mkdir -p $(@D) $(ISSUE_DIR)$(notdir $(@D)) $(OUTPUT_LOG_DIR) $(COLUMN_FIELD_DIR)$(notdir $(@D)) $(DATASET_RESOURCE_DIR)$(notdir $(@D)) $(CONVERTED_RESOURCE_DIR)$(notdir $(@D))
 	digital-land ${DIGITAL_LAND_OPTS} --dataset $(notdir $(@D)) --pipeline-dir $(PIPELINE_DIR) $(DIGITAL_LAND_FLAGS) pipeline $(1) --issue-dir $(ISSUE_DIR)$(notdir $(@D)) --column-field-dir $(COLUMN_FIELD_DIR)$(notdir $(@D)) --dataset-resource-dir $(DATASET_RESOURCE_DIR)$(notdir $(@D)) --converted-resource-dir $(CONVERTED_RESOURCE_DIR)$(notdir $(@D)) --config-path $(CACHE_DIR)config.sqlite3 --organisation-path $(CACHE_DIR)organisation.csv $(PIPELINE_FLAGS) $< $@
 endef
 
@@ -133,7 +129,6 @@ define build-dataset =
 	md5sum $@ $(basename $@).sqlite3
 	csvstack $(ISSUE_DIR)$(notdir $(basename $@))/*.csv > $(basename $@)-issue.csv
 	time digital-land ${DIGITAL_LAND_OPTS} expectations-dataset-checkpoint --dataset $(notdir $(basename $@)) --file-path $(basename $@).sqlite3  --log-dir=$(OUTPUT_LOG_DIR) --configuration-path $(CACHE_DIR)config.sqlite3 --organisation-path $(CACHE_DIR)organisation.csv --specification-dir $(SPECIFICATION_DIR)
-	time digital-land ${DIGITAL_LAND_OPTS} --dataset $(notdir $(basename $@)) operational-issue-save-csv --operational-issue-dir $(OPERATIONAL_ISSUE_DIR)
 endef
 
 define update-dataset =
@@ -155,7 +150,6 @@ define update-dataset =
 	fi
 	mv $(basename $@)-issue-updated.csv $(basename $@)-issue.csv
 	time digital-land ${DIGITAL_LAND_OPTS} expectations-dataset-checkpoint --dataset $(notdir $(basename $@)) --file-path $(basename $@).sqlite3  --log-dir=$(OUTPUT_LOG_DIR) --configuration-path $(CACHE_DIR)config.sqlite3 --organisation-path $(CACHE_DIR)organisation.csv --specification-dir $(SPECIFICATION_DIR)
-	time digital-land ${DIGITAL_LAND_OPTS} --dataset $(notdir $(basename $@)) operational-issue-save-csv --operational-issue-dir $(OPERATIONAL_ISSUE_DIR)
 endef
 
 collection::
@@ -192,36 +186,7 @@ clean::
 	rm -rf ./$(VAR_DIR)
 
 # local copy of the organisation dataset
-# Download historic operational issue log data for relevant datasets
 init:: $(CACHE_DIR)organisation.csv
-ifeq ($(COLLECTION_DATASET_BUCKET_NAME),)
-	@datasets=$$(awk -F , '$$2 == "$(COLLECTION_NAME)" {print $$4}' specification/dataset.csv); \
-	for dataset in $$datasets; do \
-		mkdir -p $(OPERATIONAL_ISSUE_DIR)$$dataset; \
-		url="$(DATASTORE_URL)$(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv"; \
-		echo "Downloading operational issue log for $$dataset at url $$url";\
-		status_code=$$(curl --write-out "%{http_code}" --head --silent --output /dev/null "$$url"); \
-		if [ "$$status_code" -eq 200 ]; then \
-			echo "Downloading file..."; \
-			curl --silent --output "$(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv" "$$url"; \
-			echo "Log downloaded to $(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv"; \
-		else \
-			echo "File not found at $$url"; \
-		fi; \
-	done
-else
-	@datasets=$$(awk -F , '$$2 == "$(COLLECTION_NAME)" {print $$4}' specification/dataset.csv); \
-	for dataset in $$datasets; do \
-		mkdir -p $(OPERATIONAL_ISSUE_DIR)$$dataset; \
-		url="s3://$(COLLECTION_DATASET_BUCKET_NAME)/$(OPERATIONAL_ISSUE_DIR)$$dataset/operational-issue.csv"; \
-        if aws s3 ls $$url > /dev/null 2>&1; then \
-            echo "File found at $$url, downloading..."; \
-            aws s3 cp $$url $(OPERATIONAL_ISSUE_DIR)/$$dataset/operational-issue.csv --no-progress; \
-        else \
-            echo "File not found at $$url"; \
-        fi; \
-	done
-endif
 
 makerules::
 	curl -qfsL '$(MAKERULES_URL)pipeline.mk' > makerules/pipeline.mk
