@@ -11,7 +11,6 @@ def _make_args(resource_path, old_resource="resource-hash-abc", dataset="some-da
         "collection_dir": "collection/",
         "transformed_dir": "transformed/",
         "issue_dir": "issue/",
-        "operational_issue_dir": "performance/operational_issue/",
         "output_log_dir": "log/",
         "column_field_dir": "var/column-field/",
         "dataset_resource_dir": "var/dataset-resource/",
