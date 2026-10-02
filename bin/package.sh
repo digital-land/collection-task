@@ -1,5 +1,5 @@
 #!/bin/bash
-# Load script - builds a dataset package directly from pre-built parquet tables in S3
+# Load script - builds a dataset package directly from Delta tables in S3
 # Requires S3 access via PARQUET_DATASETS_BUCKET
 
 set -e
@@ -39,8 +39,6 @@ DATASET_DIR=${DATASET_DIR:-"dataset/"}
 FLATTENED_DIR=${FLATTENED_DIR:-"flattened/"}
 OUTPUT_LOG_DIR=${OUTPUT_LOG_DIR:-"log/"}
 
-# Optional: bucket to save outputs to
-COLLECTION_DATASET_BUCKET_NAME=${COLLECTION_DATASET_BUCKET_NAME:-""}
 
 SQLITE_FILE="${DATASET_DIR}${DATASET_NAME}.sqlite3"
 CSV_FILE="${DATASET_DIR}${DATASET_NAME}.csv"
@@ -106,15 +104,15 @@ digital-land expectations-dataset-checkpoint \
 
 echo "Dataset $DATASET_NAME built successfully"
 
-# Step 8: Save outputs to S3 if bucket is configured
-if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
-    echo "Step 8: Saving outputs to S3 bucket: $COLLECTION_DATASET_BUCKET_NAME"
+# Step 8: Save outputs to S3
+if [ -n "$COLLECTION_DATA_BUCKET" ]; then
+    echo "Step 8: Saving outputs to S3 bucket: $COLLECTION_DATA_BUCKET"
     make save-dataset
     make save-expectations
     make save-performance
     echo "All outputs saved to S3 successfully"
 else
-    echo "Step 8: Skipping S3 upload (no COLLECTION_DATASET_BUCKET_NAME configured)"
+    echo "Step 8: Skipping S3 upload (no COLLECTION_DATA_BUCKET configured)"
 fi
 
 echo "Load complete!"
