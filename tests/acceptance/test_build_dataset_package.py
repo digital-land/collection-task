@@ -1,17 +1,17 @@
 """Acceptance tests for bin/build_dataset_package.py
 
-Uses a local Hive-partitioned parquet directory created by the tmp_path fixture
-so no S3 access is required. The specification is downloaded once per session
-using Specification.download().
+Uses local Delta tables, partitioned by dataset as pyspark-jobs writes them, created
+by the tmp_path fixture so no S3 access is required. The specification is downloaded
+once per session using Specification.download().
 """
 
 import sqlite3
 from pathlib import Path
 
 import pyarrow as pa
-import pyarrow.parquet as pq
 import pytest
 from click.testing import CliRunner
+from deltalake import DeltaTable, write_deltalake
 
 from build_dataset_package import run_command
 from digital_land.specification import Specification
@@ -28,9 +28,40 @@ OTHER_DATASET = "conservation-area"
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _write_parquet(path: Path, table: pa.Table):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, path)
+def _write_delta(table_path: Path, dataset: str, table: pa.Table):
+    """Write one dataset's rows the way pyspark-jobs' write_delta does: the first write
+    creates the table, later writes overwrite only that dataset's partition."""
+    table = table.append_column("dataset", pa.array([dataset] * table.num_rows, type=pa.string()))
+    if DeltaTable.is_deltatable(str(table_path)):
+        write_deltalake(
+            str(table_path),
+            table,
+            partition_by=["dataset"],
+            mode="overwrite",
+            predicate=f"dataset = '{dataset}'",
+        )
+    else:
+        write_deltalake(str(table_path), table, partition_by=["dataset"])
+
+
+def _entity_table(entities, names, references) -> pa.Table:
+    nulls = pa.array([None] * len(entities), type=pa.string())
+    return pa.table({
+        "end_date":          nulls,
+        "entity":            pa.array(entities, type=pa.int64()),
+        "entry_date":        nulls,
+        "geojson":           nulls,
+        "geometry":          nulls,
+        "json":              nulls,
+        "name":              pa.array(names, type=pa.string()),
+        "organisation_entity": nulls,
+        "point":             nulls,
+        "prefix":            nulls,
+        "quality":           nulls,
+        "reference":         pa.array(references, type=pa.string()),
+        "start_date":        nulls,
+        "typology":          nulls,
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -47,58 +78,30 @@ def specification_dir(tmp_path_factory):
 
 @pytest.fixture()
 def parquet_dir(tmp_path):
-    """Build a minimal Hive-partitioned parquet tree under tmp_path.
+    """Build minimal Delta tables under tmp_path, partitioned by dataset.
 
     Two datasets are written so tests can verify the dataset filter works.
-    The dataset column is derived from the directory name by DuckDB's
-    hive_partitioning — it is not a data column inside the parquet files.
+    As with pyspark-jobs, dataset is a partition column: it is held in the
+    directory name and the Delta log, not as a data column in the parquet files.
     """
     null_str2 = pa.array([None, None], type=pa.string())
-    null_str1 = pa.array([None], type=pa.string())
 
     # entity table — two rows for DATASET, one decoy row for OTHER_DATASET
-    _write_parquet(
-        tmp_path / "entity" / f"dataset={DATASET}" / "data.parquet",
-        pa.table({
-            "end_date":          null_str2,
-            "entity":            pa.array([1, 2], type=pa.int64()),
-            "entry_date":        null_str2,
-            "geojson":           null_str2,
-            "geometry":          null_str2,
-            "json":              null_str2,
-            "name":              pa.array(["Entity One", "Entity Two"], type=pa.string()),
-            "organisation_entity": null_str2,
-            "point":             null_str2,
-            "prefix":            null_str2,
-            "quality":           null_str2,
-            "reference":         pa.array(["ref-1", "ref-2"], type=pa.string()),
-            "start_date":        null_str2,
-            "typology":          null_str2,
-        }),
+    _write_delta(
+        tmp_path / "entity",
+        DATASET,
+        _entity_table([1, 2], ["Entity One", "Entity Two"], ["ref-1", "ref-2"]),
     )
-    _write_parquet(
-        tmp_path / "entity" / f"dataset={OTHER_DATASET}" / "data.parquet",
-        pa.table({
-            "end_date":          null_str1,
-            "entity":            pa.array([99], type=pa.int64()),
-            "entry_date":        null_str1,
-            "geojson":           null_str1,
-            "geometry":          null_str1,
-            "json":              null_str1,
-            "name":              pa.array(["Should Not Appear"], type=pa.string()),
-            "organisation_entity": null_str1,
-            "point":             null_str1,
-            "prefix":            null_str1,
-            "quality":           null_str1,
-            "reference":         pa.array(["ref-99"], type=pa.string()),
-            "start_date":        null_str1,
-            "typology":          null_str1,
-        }),
+    _write_delta(
+        tmp_path / "entity",
+        OTHER_DATASET,
+        _entity_table([99], ["Should Not Appear"], ["ref-99"]),
     )
 
     # fact table — two rows for DATASET only
-    _write_parquet(
-        tmp_path / "fact" / f"dataset={DATASET}" / "data.parquet",
+    _write_delta(
+        tmp_path / "fact",
+        DATASET,
         pa.table({
             "entity":           pa.array([1, 2], type=pa.int64()),
             "entry_date":       null_str2,
@@ -325,3 +328,33 @@ def test_old_entity_filters_by_entity_range(parquet_dir, collection_dir, specifi
 
     # Two rows written but only the in-range one should be loaded
     assert count == 1
+
+
+def test_only_current_delta_version_is_loaded(parquet_dir, collection_dir, specification_dir, tmp_path):
+    """Rewriting a dataset leaves the previous version's parquet files on disk until the
+    table is vacuumed; only the files in the current version should be loaded."""
+    _write_delta(
+        parquet_dir / "entity",
+        DATASET,
+        _entity_table([1, 2], ["Entity One", "Entity Two"], ["ref-1", "ref-2"]),
+    )
+    partition_files = list((parquet_dir / "entity" / f"dataset={DATASET}").glob("*.parquet"))
+    assert len(partition_files) == 2, "expected the replaced version's file to still be on disk"
+
+    output_path = tmp_path / "output" / f"{DATASET}.sqlite3"
+
+    result = CliRunner().invoke(run_command, [
+        "--dataset", DATASET,
+        "--parquet-datasets-path", str(parquet_dir),
+        "--collection-data-path", str(collection_dir),
+        "--collection", COLLECTION_NAME,
+        "--output-path", str(output_path),
+        "--specification-dir", str(specification_dir),
+    ])
+    assert result.exit_code == 0, result.output
+
+    conn = sqlite3.connect(str(output_path))
+    rows = conn.execute('SELECT entity FROM "entity" ORDER BY entity').fetchall()
+    conn.close()
+
+    assert rows == [(1,), (2,)]
