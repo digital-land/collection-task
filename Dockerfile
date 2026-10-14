@@ -1,4 +1,4 @@
-FROM python:3.8-slim-bookworm
+FROM python:3.10-slim-bookworm
 ARG DIGITAL_LAND_PYTHON_REF=main
 WORKDIR /
 RUN apt-get update
