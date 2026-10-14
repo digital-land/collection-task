@@ -10,7 +10,7 @@ This repo allows the team to replicate this task locally to fix any bugs. It doe
 
 There is a way to run the process without docker you will need to [set up some dependencies](https://digital-land.github.io/technical-documentation/development/tutorials/set-up-for-mac/):
 - install GNU make
-- set up a virtual environment with python (3.8 or 3.9)
+- set up a virtual environment with python 3.10
 
 Ensure you are inside the virtual environment is activated
 ```
