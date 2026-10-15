@@ -2,3 +2,4 @@
 -e .
 tqdm
 cloudpathlib[s3]
+deltalake>=1.0,<2

@@ -1,9 +1,12 @@
 import logging
+import os
 import sqlite3
 import click
 import duckdb
 from pathlib import Path
 from cloudpathlib import AnyPath, S3Path
+from deltalake import DeltaTable
+from deltalake.exceptions import TableNotFoundError
 
 from digital_land.organisation import Organisation
 from digital_land.package.dataset import DatasetPackage
@@ -47,6 +50,24 @@ def _csv_sources(collection_data_path, collection, dataset, entity_min, entity_m
             f'CAST("old-entity" AS INTEGER) BETWEEN {entity_min} AND {entity_max}',
         ),
     ]
+
+
+def _current_partition_files(table_path, dataset):
+    """Return the parquet files in the current version of a Delta table for one dataset.
+
+    Rewriting a dataset leaves the previous version's files in its partition directory
+    until the table is vacuumed, so the files must be listed from the Delta log rather
+    than globbed from the directory, or every row is loaded once per version.
+    """
+    storage_options = {}
+    if isinstance(table_path, S3Path):
+        region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION", "eu-west-2")
+        storage_options["AWS_REGION"] = region
+    try:
+        delta_table = DeltaTable(str(table_path), storage_options=storage_options)
+    except TableNotFoundError:
+        return []
+    return delta_table.file_uris(file_pruning_predicate=[("dataset", "=", dataset)])
 
 
 def _load_csv_table(conn, sqlite_table, path, table_columns, where_clause=None):
@@ -137,16 +158,18 @@ def build_dataset_package(
         conn.execute("CREATE SECRET (TYPE S3, PROVIDER CREDENTIAL_CHAIN);")
     conn.execute(f"ATTACH DATABASE '{output_path}' AS sqlite_db (TYPE SQLITE);")
 
-    # Load parquet tables — scan only the target dataset's partition directory
-    # to avoid hive partition schema mismatches across different dataset partitions
+    # Load parquet tables — read only the target dataset's files in the current version
+    # of each Delta table, which also avoids hive partition schema mismatches across
+    # different dataset partitions
     for table_name, cols in PARQUET_COLUMNS.items():
-        dataset_partition_path = base_path / table_name / f"dataset={dataset}"
+        files = _current_partition_files(base_path / table_name, dataset)
 
-        if not dataset_partition_path.exists():
-            logger.debug(f"No directory at {dataset_partition_path}, skipping '{table_name}'")
+        if not files:
+            logger.debug(f"No Delta files for {dataset} in '{table_name}', skipping")
             continue
 
-        scan_path = f"{dataset_partition_path}/**/*.parquet"
+        file_list = ", ".join(f"'{f}'" for f in files)
+
         # dataset is a virtual hive column — supply it as a literal in the same
         # position to keep col_list and select_list aligned
         col_list = ", ".join(f'"{c}"' for c in cols)
@@ -159,7 +182,7 @@ def build_dataset_package(
         conn.execute(f"""
             INSERT INTO sqlite_db."{table_name}" ({col_list})
             SELECT {select_list}
-            FROM parquet_scan('{scan_path}')
+            FROM parquet_scan([{file_list}])
         """)
 
     # Load CSV tables from the collection data path
