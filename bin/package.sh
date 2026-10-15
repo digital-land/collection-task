@@ -107,11 +107,15 @@ digital-land expectations-dataset-checkpoint \
 echo "Dataset $DATASET_NAME built successfully"
 
 # Step 8: Save outputs to S3 if bucket is configured
+# Only the files nothing else produces are uploaded: the dataset SQLite with its datasette
+# inspect file and the expectation results.
 if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Step 8: Saving outputs to S3 bucket: $COLLECTION_DATASET_BUCKET_NAME"
-    make save-dataset
+    DATASET_S3_PATH="s3://${COLLECTION_DATASET_BUCKET_NAME}/${COLLECTION_NAME}-collection/${DATASET_DIR}"
+    # inspect file first: efs-sync is triggered by the SQLite upload and copies the matching .json with it
+    aws s3 cp "$JSON_FILE" "${DATASET_S3_PATH}${DATASET_NAME}.sqlite3.json" --no-progress
+    aws s3 cp "$SQLITE_FILE" "${DATASET_S3_PATH}${DATASET_NAME}.sqlite3" --no-progress
     make save-expectations
-    make save-performance
     echo "All outputs saved to S3 successfully"
 else
     echo "Step 8: Skipping S3 upload (no COLLECTION_DATASET_BUCKET_NAME configured)"
