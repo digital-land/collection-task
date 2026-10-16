@@ -132,7 +132,20 @@ def collection_dir(tmp_path, specification_dir):
     # dataset-resource
     dr_dir = base / "var" / "dataset-resource" / DATASET
     dr_dir.mkdir(parents=True)
-    (dr_dir / "resource1.csv").write_text("resource,dataset\nabc123,brownfield-land\n")
+    (dr_dir / "resource1.csv").write_text(
+        "dataset,resource,entity-count,entry-count,line-count,mime-type,code-version\n"
+        "brownfield-land,abc123,3,3,4,text/csv,1.0\n"
+    )
+    # older resources were logged before entity-count and code-version were added to the header
+    (dr_dir / "resource2.csv").write_text(
+        "dataset,resource,entry-count,line-count,mime-type\n"
+        "brownfield-land,def456,5,6,text/csv\n"
+    )
+    # some older resources were logged with a leading entry-date column
+    (dr_dir / "resource3.csv").write_text(
+        "entry-date,dataset,resource,entry-count,line-count,mime-type\n"
+        "2023-06-19T00:29:55Z,brownfield-land,ghi789,7,8,application/zip\n"
+    )
 
     # column-field
     cf_dir = base / "var" / "column-field" / DATASET
@@ -281,10 +294,16 @@ def test_dataset_resource_csv_is_loaded(parquet_dir, collection_dir, specificati
     assert result.exit_code == 0, result.output
 
     conn = sqlite3.connect(str(output_path))
-    count = conn.execute('SELECT COUNT(*) FROM dataset_resource').fetchone()[0]
+    rows = conn.execute(
+        'SELECT resource, entry_date, entry_count, line_count, mime_type FROM dataset_resource ORDER BY resource'
+    ).fetchall()
     conn.close()
 
-    assert count == 1
+    assert rows == [
+        ("abc123", None, 3, 4, "text/csv"),
+        ("def456", None, 5, 6, "text/csv"),
+        ("ghi789", "2023-06-19T00:29:55Z", 7, 8, "application/zip"),
+    ]
 
 
 def test_column_field_csv_is_loaded(parquet_dir, collection_dir, specification_dir, tmp_path):
@@ -323,11 +342,12 @@ def test_old_entity_filters_by_entity_range(parquet_dir, collection_dir, specifi
     assert result.exit_code == 0, result.output
 
     conn = sqlite3.connect(str(output_path))
-    count = conn.execute('SELECT COUNT(*) FROM old_entity').fetchone()[0]
+    old_entities = conn.execute('SELECT old_entity FROM old_entity').fetchall()
     conn.close()
 
     # Two rows written but only the in-range one should be loaded
-    assert count == 1
+    assert len(old_entities) == 1
+    assert old_entities[0][0] is not None
 
 
 def test_only_current_delta_version_is_loaded(parquet_dir, collection_dir, specification_dir, tmp_path):

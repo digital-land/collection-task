@@ -81,10 +81,10 @@ def _load_csv_table(conn, sqlite_table, path, table_columns, where_clause=None):
     csv_cols = {
         row[0]
         for row in conn.execute(
-            f"DESCRIBE SELECT * FROM read_csv_auto('{path}') LIMIT 0"
+            f"DESCRIBE SELECT * FROM read_csv_auto('{path}', union_by_name = true) LIMIT 0"
         ).fetchall()
     }
-    cols = [c for c in table_columns[sqlite_table] if c in csv_cols]
+    cols = [c for c in table_columns[sqlite_table] if c.replace("_", "-") in csv_cols]
     if not cols:
         logger.debug(f"No matching columns for '{sqlite_table}', skipping")
         return
@@ -98,7 +98,7 @@ def _load_csv_table(conn, sqlite_table, path, table_columns, where_clause=None):
     conn.execute(f"""
         INSERT INTO sqlite_db."{sqlite_table}" ({sqlite_col_list})
         SELECT {csv_col_list}
-        FROM read_csv_auto('{path}')
+        FROM read_csv_auto('{path}', union_by_name = true)
         {where}
     """)
 
