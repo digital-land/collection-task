@@ -96,6 +96,13 @@ digital-land --dataset "$DATASET_NAME" --pipeline-dir "$PIPELINE_DIR" --specific
 
 # Step 7: Run dataset expectations
 echo "Step 7: Running dataset expectations..."
+
+# Fetch previous expectations from S3, to retain historic results on days expectations are skipped
+if [ -n "$COLLECTION_DATASET_BUCKET_NAME" ]; then
+    echo "Fetching previous expectation results from S3..."
+    aws s3 sync "s3://${COLLECTION_DATASET_BUCKET_NAME}/${OUTPUT_LOG_DIR}expectation/dataset=${DATASET_NAME}/" "${OUTPUT_LOG_DIR}expectation/dataset=${DATASET_NAME}/" --no-progress
+fi
+
 digital-land expectations-dataset-checkpoint \
     --dataset "$DATASET_NAME" \
     --file-path "$SQLITE_FILE" \
