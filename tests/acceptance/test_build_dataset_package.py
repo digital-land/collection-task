@@ -14,6 +14,8 @@ from click.testing import CliRunner
 from deltalake import DeltaTable, write_deltalake
 
 from build_dataset_package import run_command
+from digital_land.organisation import Organisation
+from digital_land.package.dataset import DatasetPackage
 from digital_land.specification import Specification
 
 # ---------------------------------------------------------------------------
@@ -378,3 +380,102 @@ def test_only_current_delta_version_is_loaded(parquet_dir, collection_dir, speci
     conn.close()
 
     assert rows == [(1,), (2,)]
+
+
+def _write_fact_resource_with_counts(parquet_dir):
+    """Facts for three entities, one of which is not in the entity table, plus a
+    fact_resource row whose fact is not in the fact table."""
+    null_str3 = pa.array([None, None, None], type=pa.string())
+    _write_delta(
+        parquet_dir / "fact",
+        DATASET,
+        pa.table({
+            "entity":           pa.array([1, 2, 3], type=pa.int64()),
+            "entry_date":       null_str3,
+            "fact":             pa.array(["fact-1", "fact-2", "fact-3"], type=pa.string()),
+            "field":            pa.array(["name", "name", "name"], type=pa.string()),
+            "priority":         pa.array([None, None, None], type=pa.int64()),
+            "reference_entity": null_str3,
+            "value":            pa.array(["Entity One", "Entity Two", "Entity Three"], type=pa.string()),
+        }),
+    )
+    rows = [
+        ("fact-1", "abc123", 1),
+        ("fact-2", "abc123", 2),
+        ("fact-missing", "abc123", 3),
+        ("fact-1", "def456", 1),
+        ("fact-1", "def456", 2),
+        ("fact-3", "def456", 3),
+    ]
+    _write_delta(
+        parquet_dir / "fact_resource",
+        DATASET,
+        pa.table({
+            "fact":         pa.array([r[0] for r in rows], type=pa.string()),
+            "entry_date":   pa.array([None] * len(rows), type=pa.string()),
+            "entry_number": pa.array([r[2] for r in rows], type=pa.int64()),
+            "priority":     pa.array([None] * len(rows), type=pa.int64()),
+            "resource":     pa.array([r[1] for r in rows], type=pa.string()),
+            "entity":       pa.array([1, 2, 9, 1, 1, 3], type=pa.int64()),
+            "field":        pa.array(["name"] * len(rows), type=pa.string()),
+        }),
+    )
+
+
+def test_entity_counts_are_the_distinct_entities_each_resource_supplies(
+    parquet_dir, collection_dir, specification_dir, tmp_path
+):
+    """entity_count is replaced for resources that supply facts, counting only facts in
+    the fact table whose entity is in the entity table; other resources keep their CSV value."""
+    _write_fact_resource_with_counts(parquet_dir)
+    output_path = tmp_path / "output" / f"{DATASET}.sqlite3"
+
+    result = CliRunner().invoke(run_command, [
+        "--dataset", DATASET,
+        "--parquet-datasets-path", str(parquet_dir),
+        "--collection-data-path", str(collection_dir),
+        "--collection", COLLECTION_NAME,
+        "--output-path", str(output_path),
+        "--specification-dir", str(specification_dir),
+    ])
+    assert result.exit_code == 0, result.output
+
+    conn = sqlite3.connect(str(output_path))
+    rows = conn.execute("SELECT resource, entity_count FROM dataset_resource ORDER BY resource").fetchall()
+    conn.close()
+
+    assert rows == [("abc123", 2), ("def456", 1), ("ghi789", None)]
+
+
+def test_entity_counts_match_dataset_package_add_counts(parquet_dir, collection_dir, specification_dir, tmp_path):
+    """The counts must equal what DatasetPackage.add_counts computes from the loaded tables."""
+    _write_fact_resource_with_counts(parquet_dir)
+    output_path = tmp_path / "output" / f"{DATASET}.sqlite3"
+
+    result = CliRunner().invoke(run_command, [
+        "--dataset", DATASET,
+        "--parquet-datasets-path", str(parquet_dir),
+        "--collection-data-path", str(collection_dir),
+        "--collection", COLLECTION_NAME,
+        "--output-path", str(output_path),
+        "--specification-dir", str(specification_dir),
+    ])
+    assert result.exit_code == 0, result.output
+
+    query = "SELECT resource, entity_count FROM dataset_resource ORDER BY resource"
+    conn = sqlite3.connect(str(output_path))
+    built = conn.execute(query).fetchall()
+    conn.close()
+
+    DatasetPackage(
+        DATASET,
+        organisation=Organisation(organisation={}),
+        path=str(output_path),
+        specification_dir=str(specification_dir),
+    ).add_counts()
+
+    conn = sqlite3.connect(str(output_path))
+    recounted = conn.execute(query).fetchall()
+    conn.close()
+
+    assert built == recounted

@@ -103,6 +103,40 @@ def _load_csv_table(conn, sqlite_table, path, table_columns, where_clause=None):
     """)
 
 
+def _entity_counts_by_resource(conn, table_files):
+    """Count the distinct entities each resource supplies, from the parquet tables.
+
+    Gives the same result as DatasetPackage.add_counts, which runs this join in SQLite
+    over the loaded tables. Running it in DuckDB against the parquet instead is parallel
+    and avoids a single-threaded join over every fact_resource row, the slowest part of
+    packaging a dataset with a large fact_resource such as listed-building.
+    """
+    if not all(table_files.get(t) for t in ("entity", "fact", "fact_resource")):
+        return []
+
+    def scan(table_name):
+        return "parquet_scan([" + ", ".join(f"'{f}'" for f in table_files[table_name]) + "])"
+
+    return conn.execute(f"""
+        SELECT fr.resource, COUNT(DISTINCT f.entity)
+        FROM {scan("fact_resource")} fr
+        JOIN {scan("fact")} f ON f.fact = fr.fact
+        JOIN {scan("entity")} e ON e.entity = f.entity
+        GROUP BY fr.resource
+    """).fetchall()
+
+
+def _write_entity_counts(output_path, counts):
+    """Set dataset_resource.entity_count for each resource that supplies entities."""
+    db_conn = sqlite3.connect(str(output_path))
+    db_conn.executemany(
+        "UPDATE dataset_resource SET entity_count = ? WHERE resource = ?",
+        [(count, resource) for resource, count in counts],
+    )
+    db_conn.commit()
+    db_conn.close()
+
+
 def build_dataset_package(
     dataset,
     parquet_datasets_path,
@@ -161,8 +195,10 @@ def build_dataset_package(
     # Load parquet tables — read only the target dataset's files in the current version
     # of each Delta table, which also avoids hive partition schema mismatches across
     # different dataset partitions
+    table_files = {}
     for table_name, cols in PARQUET_COLUMNS.items():
         files = _current_partition_files(base_path / table_name, dataset)
+        table_files[table_name] = files
 
         if not files:
             logger.debug(f"No Delta files for {dataset} in '{table_name}', skipping")
@@ -195,6 +231,9 @@ def build_dataset_package(
     else:
         logger.debug("No collection data path configured, skipping CSV tables")
 
+    logger.info("Counting entities by resource")
+    entity_counts = _entity_counts_by_resource(conn, table_files)
+
     conn.execute("DETACH DATABASE sqlite_db;")
     conn.close()
 
@@ -206,7 +245,7 @@ def build_dataset_package(
     package.disconnect()
 
     logger.info("Adding counts")
-    package.add_counts()
+    _write_entity_counts(output_path, entity_counts)
 
     logger.info(f"Dataset package built: {output_path}")
 
