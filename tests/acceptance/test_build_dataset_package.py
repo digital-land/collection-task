@@ -384,7 +384,7 @@ def test_only_current_delta_version_is_loaded(parquet_dir, collection_dir, speci
 
 def _write_fact_resource_with_counts(parquet_dir):
     """Facts for three entities, one of which is not in the entity table, plus a
-    fact_resource row whose fact is not in the fact table."""
+    fact_resource row for an entity that is not in the entity table."""
     null_str3 = pa.array([None, None, None], type=pa.string())
     _write_delta(
         parquet_dir / "fact",
@@ -425,8 +425,8 @@ def _write_fact_resource_with_counts(parquet_dir):
 def test_entity_counts_are_the_distinct_entities_each_resource_supplies(
     parquet_dir, collection_dir, specification_dir, tmp_path
 ):
-    """entity_count is replaced for resources that supply facts, counting only facts in
-    the fact table whose entity is in the entity table; other resources keep their CSV value."""
+    """entity_count is replaced for resources that supply facts, counting only entities
+    in the entity table; other resources keep their CSV value."""
     _write_fact_resource_with_counts(parquet_dir)
     output_path = tmp_path / "output" / f"{DATASET}.sqlite3"
 

@@ -104,25 +104,25 @@ def _load_csv_table(conn, sqlite_table, path, table_columns, where_clause=None):
 
 
 def _entity_counts_by_resource(conn, table_files):
-    """Count the distinct entities each resource supplies, from the parquet tables.
+    """Count the distinct entities each resource supplies, for dataset_resource.entity_count.
 
-    Gives the same result as DatasetPackage.add_counts, which runs this join in SQLite
-    over the loaded tables. Running it in DuckDB against the parquet instead is parallel
-    and avoids a single-threaded join over every fact_resource row, the slowest part of
-    packaging a dataset with a large fact_resource such as listed-building.
+    An entity counts towards a resource when the resource has at least one fact_resource
+    row for it and the entity is in the entity table, as in DatasetPackage.add_counts.
+    Returns (resource, count) pairs, or an empty list when the dataset has no entity or
+    fact_resource files.
     """
-    if not all(table_files.get(t) for t in ("entity", "fact", "fact_resource")):
+
+    if not all(table_files.get(t) for t in ("entity", "fact_resource")):
         return []
 
     def scan(table_name):
         return "parquet_scan([" + ", ".join(f"'{f}'" for f in table_files[table_name]) + "])"
 
     return conn.execute(f"""
-        SELECT fr.resource, COUNT(DISTINCT f.entity)
-        FROM {scan("fact_resource")} fr
-        JOIN {scan("fact")} f ON f.fact = fr.fact
-        JOIN {scan("entity")} e ON e.entity = f.entity
-        GROUP BY fr.resource
+        SELECT resource, COUNT(*)
+        FROM (SELECT DISTINCT resource, entity FROM {scan("fact_resource")})
+        WHERE entity IN (SELECT entity FROM {scan("entity")})
+        GROUP BY resource
     """).fetchall()
 
 
