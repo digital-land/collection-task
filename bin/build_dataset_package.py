@@ -47,7 +47,7 @@ def _csv_sources(collection_data_path, collection, dataset, entity_min, entity_m
         (
             "old_entity",
             f"{collection_data_path}/config/pipeline/{collection}/old-entity.csv",
-            f'CAST("old-entity" AS INTEGER) BETWEEN {entity_min} AND {entity_max}',
+            f'CAST("old-entity" AS BIGINT) BETWEEN {entity_min} AND {entity_max}',
         ),
     ]
 
