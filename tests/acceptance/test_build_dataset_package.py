@@ -352,6 +352,41 @@ def test_old_entity_filters_by_entity_range(parquet_dir, collection_dir, specifi
     assert old_entities[0][0] is not None
 
 
+def test_old_entity_filters_entity_numbers_above_32_bit_range(parquet_dir, specification_dir, tmp_path):
+    """Datasets such as tree have entity numbers above 2,147,483,647, so the range
+    filter must compare them as 64-bit integers rather than fail to cast them."""
+    spec = Specification(str(specification_dir))
+    entity_min = int(spec.get_dataset_entity_min("tree"))
+    entity_max = int(spec.get_dataset_entity_max("tree"))
+    assert entity_max > 2_147_483_647
+
+    collection_dir = tmp_path / "collection"
+    oe_dir = collection_dir / "config" / "pipeline" / "tree-preservation-order"
+    oe_dir.mkdir(parents=True)
+    (oe_dir / "old-entity.csv").write_text(
+        f"old-entity,entity,status\n"
+        f"{entity_min},{entity_min + 1},\n"  # tree - should be loaded
+        f"7001001211,7001001212,\n"          # tree-preservation-order - should be filtered
+    )
+    output_path = tmp_path / "output" / "tree.sqlite3"
+
+    result = CliRunner().invoke(run_command, [
+        "--dataset", "tree",
+        "--parquet-datasets-path", str(parquet_dir),
+        "--collection-data-path", str(collection_dir),
+        "--collection", "tree-preservation-order",
+        "--output-path", str(output_path),
+        "--specification-dir", str(specification_dir),
+    ])
+    assert result.exit_code == 0, result.output
+
+    conn = sqlite3.connect(str(output_path))
+    old_entities = conn.execute("SELECT old_entity FROM old_entity").fetchall()
+    conn.close()
+
+    assert [row[0] for row in old_entities] == [str(entity_min)]
+
+
 def test_only_current_delta_version_is_loaded(parquet_dir, collection_dir, specification_dir, tmp_path):
     """Rewriting a dataset leaves the previous version's parquet files on disk until the
     table is vacuumed; only the files in the current version should be loaded."""
