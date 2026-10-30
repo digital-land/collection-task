@@ -28,7 +28,7 @@ def download_transformed(
     converted_resource_dir="var/converted-resource/",
     max_threads=4,
     transformation_offset=None,
-    transformation_limit=None
+    transformation_limit=None,
 ):
     """Download transformed resources using dataset_resource_map.
 
@@ -58,10 +58,12 @@ def download_transformed(
         raise ValueError("Either bucket or base_url must be provided")
 
     retired_resources = set()
-    if collection and hasattr(collection, 'old_resource'):
+    if collection and hasattr(collection, "old_resource"):
         retired_resources = build_retired_resources_set(collection.old_resource.entries)
 
-    dataset_resource_pairs = build_dataset_resource_pairs(dataset_resource_map, dataset=dataset)
+    dataset_resource_pairs = build_dataset_resource_pairs(
+        dataset_resource_map, dataset=dataset
+    )
     total_pairs = len(dataset_resource_pairs)
     dataset_resource_pairs = apply_offset_and_limit(
         dataset_resource_pairs,
@@ -70,7 +72,9 @@ def download_transformed(
         dataset=dataset,
     )
 
-    logger.info(f"Downloading transformed files for {len(dataset_resource_pairs)} transformation tasks (out of {total_pairs} total)")
+    logger.info(
+        f"Downloading transformed files for {len(dataset_resource_pairs)} transformation tasks (out of {total_pairs} total)"
+    )
 
     # Now build URL map from the filtered list
     url_map = {}
@@ -84,11 +88,23 @@ def download_transformed(
         # Define all file types to download per resource
         # Files are organized by dataset, not just resource
         files_to_download = [
-            (f"{transformed_dir}{ds}/{resource}.parquet", f"{transformed_dir}{ds}/{resource}.parquet"),
+            (
+                f"{transformed_dir}{ds}/{resource}.parquet",
+                f"{transformed_dir}{ds}/{resource}.parquet",
+            ),
             (f"{issue_dir}{ds}/{resource}.csv", f"{issue_dir}{ds}/{resource}.csv"),
-            (f"{column_field_dir}{ds}/{resource}.csv", f"{column_field_dir}{ds}/{resource}.csv"),
-            (f"{dataset_resource_dir}{ds}/{resource}.csv", f"{dataset_resource_dir}{ds}/{resource}.csv"),
-            (f"{converted_resource_dir}{ds}/{resource}.csv", f"{converted_resource_dir}{ds}/{resource}.csv"),
+            (
+                f"{column_field_dir}{ds}/{resource}.csv",
+                f"{column_field_dir}{ds}/{resource}.csv",
+            ),
+            (
+                f"{dataset_resource_dir}{ds}/{resource}.csv",
+                f"{dataset_resource_dir}{ds}/{resource}.csv",
+            ),
+            (
+                f"{converted_resource_dir}{ds}/{resource}.csv",
+                f"{converted_resource_dir}{ds}/{resource}.csv",
+            ),
         ]
 
         for local_path, remote_path in files_to_download:
@@ -97,16 +113,22 @@ def download_transformed(
                 url = f"s3://{bucket}/{collection_name}-collection/{remote_path}"
             else:
                 # Build HTTP(S) URL
-                base = base_url.rstrip('/') + '/'
+                base = base_url.rstrip("/") + "/"
                 url = f"{base}{collection_name}-collection/{remote_path}"
 
             url_map[url] = local_path
 
     # Log download info
     source_type = "S3" if bucket else "HTTP(S)"
-    num_transformation_tasks = len(dataset_resource_pairs) - len([r for _, r in dataset_resource_pairs if r in retired_resources])
-    files_per_task = len(url_map) // num_transformation_tasks if num_transformation_tasks > 0 else 0
-    logger.info(f"Downloading {len(url_map)} files ({files_per_task} per transformation task) from {source_type}...")
+    num_transformation_tasks = len(dataset_resource_pairs) - len(
+        [r for _, r in dataset_resource_pairs if r in retired_resources]
+    )
+    files_per_task = (
+        len(url_map) // num_transformation_tasks if num_transformation_tasks > 0 else 0
+    )
+    logger.info(
+        f"Downloading {len(url_map)} files ({files_per_task} per transformation task) from {source_type}..."
+    )
 
     # Download files
     results = download_files(url_map, max_threads=max_threads)
@@ -128,7 +150,7 @@ def download_transformed_resources(
     converted_resource_dir: str = "var/converted-resource/",
     max_threads: int = 4,
     transformation_offset: int = None,
-    transformation_limit: int = None
+    transformation_limit: int = None,
 ) -> None:
     """Download transformed resources and related files from S3 or HTTP(S) URLs.
 
@@ -168,7 +190,7 @@ def download_transformed_resources(
         converted_resource_dir=converted_resource_dir,
         max_threads=max_threads,
         transformation_offset=transformation_offset,
-        transformation_limit=transformation_limit
+        transformation_limit=transformation_limit,
     )
 
 
@@ -177,76 +199,56 @@ def download_transformed_resources(
     "--collection-dir",
     required=True,
     type=click.Path(exists=True),
-    help="Path to the collection directory"
+    help="Path to the collection directory",
 )
 @click.option(
     "--bucket",
     default=None,
-    help="S3 bucket name to download from (optional if --base-url provided)"
+    help="S3 bucket name to download from (optional if --base-url provided)",
 )
 @click.option(
     "--base-url",
     default=None,
-    help="Base URL for HTTP(S) downloads (e.g., https://files.planning.data.gov.uk/)"
+    help="Base URL for HTTP(S) downloads (e.g., https://files.planning.data.gov.uk/)",
 )
 @click.option(
-    "--collection-name",
-    required=True,
-    help="Collection name (e.g., 'brownfield-land')"
+    "--collection-name", required=True, help="Collection name (e.g., 'brownfield-land')"
 )
 @click.option(
     "--dataset",
     default=None,
-    help="Optional dataset name to filter downloads (e.g., 'brownfield-land')"
+    help="Optional dataset name to filter downloads (e.g., 'brownfield-land')",
 )
 @click.option(
     "--transformed-dir",
     default="transformed/",
-    help="Local directory for transformed files"
+    help="Local directory for transformed files",
 )
-@click.option(
-    "--issue-dir",
-    default="issue/",
-    help="Local directory for issue files"
-)
+@click.option("--issue-dir", default="issue/", help="Local directory for issue files")
 @click.option(
     "--column-field-dir",
     default="var/column-field/",
-    help="Local directory for column field mappings"
+    help="Local directory for column field mappings",
 )
 @click.option(
     "--dataset-resource-dir",
     default="var/dataset-resource/",
-    help="Local directory for dataset resource mappings"
+    help="Local directory for dataset resource mappings",
 )
 @click.option(
     "--converted-resource-dir",
     default="var/converted-resource/",
-    help="Local directory for converted resources"
+    help="Local directory for converted resources",
 )
-@click.option(
-    "--offset",
-    default=None,
-    type=int,
-    help="Offset for filtering resources"
-)
-@click.option(
-    "--limit",
-    default=None,
-    type=int,
-    help="Limit for filtering resources"
-)
+@click.option("--offset", default=None, type=int, help="Offset for filtering resources")
+@click.option("--limit", default=None, type=int, help="Limit for filtering resources")
 @click.option(
     "--max-threads",
     default=4,
     type=int,
-    help="Maximum number of concurrent download threads"
+    help="Maximum number of concurrent download threads",
 )
-@click.option(
-    "--verbose",
-    is_flag=True,
-    help="Enable verbose logging"
-)
+@click.option("--verbose", is_flag=True, help="Enable verbose logging")
 def run_command(
     collection_dir,
     bucket,
@@ -261,7 +263,7 @@ def run_command(
     offset,
     limit,
     max_threads,
-    verbose
+    verbose,
 ):
     """Download transformed resources and supporting files from S3 or HTTP(S) URLs.
 
@@ -269,9 +271,9 @@ def run_command(
     """
     # Configure logging
     if verbose:
-        logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     else:
-        logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
+        logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
     # Validate that either bucket or base_url is provided
     if not bucket and not base_url:
@@ -292,7 +294,7 @@ def run_command(
             converted_resource_dir=converted_resource_dir,
             max_threads=max_threads,
             transformation_offset=offset,
-            transformation_limit=limit
+            transformation_limit=limit,
         )
         click.echo("Download complete!")
     except RuntimeError as e:

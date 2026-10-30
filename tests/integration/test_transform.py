@@ -4,7 +4,12 @@ import pytest
 from collection_task.transform import process_single_resource
 
 
-def _make_args(resource_path, old_resource="resource-hash-abc", dataset="some-dataset", **config_overrides):
+def _make_args(
+    resource_path,
+    old_resource="resource-hash-abc",
+    dataset="some-dataset",
+    **config_overrides
+):
     config = {
         "pipeline_dir": "pipeline/",
         "cache_dir": "var/cache/",
