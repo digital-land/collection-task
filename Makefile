@@ -1,5 +1,9 @@
+# every goal needs a collection except lint and format, which only run black and flake8
+NEEDS_COLLECTION := $(if $(MAKECMDGOALS),$(filter-out lint format,$(MAKECMDGOALS)),default)
+ifneq ($(NEEDS_COLLECTION),)
 ifeq ($(COLLECTION_NAME),)
 $(error Environment variable COLLECTION_NAME is not set)
+endif
 endif
 
 .PHONY: \
@@ -43,3 +47,10 @@ clean::
 	rm -rf specification
 	rm -rf log
 	rm -rf state.json
+
+lint::
+	black --check .
+	flake8 .
+
+format::
+	black .

@@ -18,19 +18,50 @@ logger = logging.getLogger(__name__)
 # fact, fact_resource and issue do not have start_date or end_date.
 PARQUET_COLUMNS = {
     "entity": [
-        "dataset", "end_date", "entity", "entry_date", "geometry",
-        "json", "name", "organisation_entity", "point", "prefix", "quality",
-        "reference", "start_date", "typology",
+        "dataset",
+        "end_date",
+        "entity",
+        "entry_date",
+        "geometry",
+        "json",
+        "name",
+        "organisation_entity",
+        "point",
+        "prefix",
+        "quality",
+        "reference",
+        "start_date",
+        "typology",
     ],
     "fact": [
-        "entity", "fact", "field", "entry_date", "priority", "reference_entity", "value",
+        "entity",
+        "fact",
+        "field",
+        "entry_date",
+        "priority",
+        "reference_entity",
+        "value",
     ],
     "fact_resource": [
-        "fact", "entry_date", "entry_number", "priority", "resource", "entity", "field",
+        "fact",
+        "entry_date",
+        "entry_number",
+        "priority",
+        "resource",
+        "entity",
+        "field",
     ],
     "issue": [
-        "entity", "entry_date", "entry_number", "field", "issue_type",
-        "line_number", "dataset", "resource", "value", "message",
+        "entity",
+        "entry_date",
+        "entry_number",
+        "field",
+        "issue_type",
+        "line_number",
+        "dataset",
+        "resource",
+        "value",
+        "message",
     ],
 }
 
@@ -61,7 +92,9 @@ def _current_partition_files(table_path, dataset):
     """
     storage_options = {}
     if isinstance(table_path, S3Path):
-        region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION", "eu-west-2")
+        region = os.environ.get("AWS_REGION") or os.environ.get(
+            "AWS_DEFAULT_REGION", "eu-west-2"
+        )
         storage_options["AWS_REGION"] = region
     try:
         delta_table = DeltaTable(str(table_path), storage_options=storage_options)
@@ -95,12 +128,14 @@ def _load_csv_table(conn, sqlite_table, path, table_columns, where_clause=None):
     csv_col_list = ", ".join(f'"{c.replace("_", "-")}" AS "{c}"' for c in cols)
     where = f"WHERE {where_clause}" if where_clause else ""
     logger.info(f"Loading CSV file(s) into '{sqlite_table}'")
-    conn.execute(f"""
+    conn.execute(
+        f"""
         INSERT INTO sqlite_db."{sqlite_table}" ({sqlite_col_list})
         SELECT {csv_col_list}
         FROM read_csv_auto('{path}', union_by_name = true)
         {where}
-    """)
+    """
+    )
 
 
 def _entity_counts_by_resource(conn, table_files):
@@ -116,14 +151,20 @@ def _entity_counts_by_resource(conn, table_files):
         return []
 
     def scan(table_name):
-        return "parquet_scan([" + ", ".join(f"'{f}'" for f in table_files[table_name]) + "])"
+        return (
+            "parquet_scan(["
+            + ", ".join(f"'{f}'" for f in table_files[table_name])
+            + "])"
+        )
 
-    return conn.execute(f"""
+    return conn.execute(
+        f"""
         SELECT resource, COUNT(*)
         FROM (SELECT DISTINCT resource, entity FROM {scan("fact_resource")})
         WHERE entity IN (SELECT entity FROM {scan("entity")})
         GROUP BY resource
-    """).fetchall()
+    """
+    ).fetchall()
 
 
 def _write_entity_counts(output_path, counts):
@@ -188,7 +229,9 @@ def build_dataset_package(
     conn = duckdb.connect()
     conn.execute("INSTALL httpfs; LOAD httpfs;")
     conn.execute("INSTALL sqlite; LOAD sqlite;")
-    if isinstance(base_path, S3Path) or isinstance(AnyPath(collection_data_path), S3Path):
+    if isinstance(base_path, S3Path) or isinstance(
+        AnyPath(collection_data_path), S3Path
+    ):
         conn.execute("CREATE SECRET (TYPE S3, PROVIDER CREDENTIAL_CHAIN);")
     conn.execute(f"ATTACH DATABASE '{output_path}' AS sqlite_db (TYPE SQLITE);")
 
@@ -210,16 +253,17 @@ def build_dataset_package(
         # position to keep col_list and select_list aligned
         col_list = ", ".join(f'"{c}"' for c in cols)
         select_list = ", ".join(
-            f"'{dataset}' AS \"dataset\"" if c == "dataset" else f'"{c}"'
-            for c in cols
+            f"'{dataset}' AS \"dataset\"" if c == "dataset" else f'"{c}"' for c in cols
         )
 
         logger.info(f"Loading parquet files into '{table_name}'")
-        conn.execute(f"""
+        conn.execute(
+            f"""
             INSERT INTO sqlite_db."{table_name}" ({col_list})
             SELECT {select_list}
             FROM parquet_scan([{file_list}])
-        """)
+        """
+        )
 
     # Load CSV tables from the collection data path
     if collection_data_path and collection:
@@ -251,7 +295,9 @@ def build_dataset_package(
 
 
 @click.command()
-@click.option("--dataset", required=True, help="Dataset name (e.g. central-activities-zone)")
+@click.option(
+    "--dataset", required=True, help="Dataset name (e.g. central-activities-zone)"
+)
 @click.option(
     "--parquet-datasets-path",
     required=True,
@@ -300,7 +346,9 @@ def run_command(
             --output-path dataset/central-activities-zone.sqlite3
     """
     if debug:
-        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s: %(message)s")
+        logging.basicConfig(
+            level=logging.DEBUG, format="%(asctime)s - %(levelname)s: %(message)s"
+        )
     elif quiet:
         logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
     else:

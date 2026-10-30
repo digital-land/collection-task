@@ -70,7 +70,9 @@ def download_dataset_resource(
     downloaded = 0
     with ThreadPoolExecutor(max_threads) as executor:
         futures = {
-            executor.submit(download_file, url, path, raise_error=False, max_retries=1): url
+            executor.submit(
+                download_file, url, path, raise_error=False, max_retries=1
+            ): url
             for url, path in url_map.items()
         }
         for future in futures:

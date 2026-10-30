@@ -35,7 +35,9 @@ def remove_files(s3_client, bucket, keys):
         )
         errors = response.get("Errors", [])
         if errors:
-            raise RuntimeError(f"failed to delete {len(errors)} file(s) from {bucket}: {errors}")
+            raise RuntimeError(
+                f"failed to delete {len(errors)} file(s) from {bucket}: {errors}"
+            )
 
 
 def is_dry_run(value):
@@ -46,7 +48,8 @@ def is_dry_run(value):
 def retire_dataset_files(s3_client, bucket, dataset, collection, dry_run=True):
     """List the dataset's user-facing files and, unless this is a dry run, delete them.
 
-    The bucket is versioned, so a deleted file can be restored for a few days afterwards."""
+    The bucket is versioned, so a deleted file can be restored for a few days afterwards.
+    """
     keys = list_files(s3_client, bucket, dataset_file_prefixes(dataset, collection))
 
     if not keys:

@@ -45,7 +45,11 @@ class FakePaginator:
             yield {"KeyCount": 0}
             return
         for start in range(0, len(keys), self.client.page_size):
-            yield {"Contents": [{"Key": key} for key in keys[start : start + self.client.page_size]]}
+            yield {
+                "Contents": [
+                    {"Key": key} for key in keys[start : start + self.client.page_size]
+                ]
+            }
 
 
 class FakeS3Client:
@@ -72,6 +76,7 @@ class FakeS3Client:
 
 # Test dataset_file_prefixes
 
+
 def test_dataset_file_prefixes_covers_public_downloads_and_collection_dataset_folder():
     """Should cover dataset/ and the collection's dataset/ folder, ending each with a dot"""
     assert dataset_file_prefixes("planning-application", "planning-application") == [
@@ -82,11 +87,16 @@ def test_dataset_file_prefixes_covers_public_downloads_and_collection_dataset_fo
 
 # Test list_files
 
+
 def test_list_files_finds_only_the_dataset_files():
     """Should list the dataset's files but not those of datasets whose names start with it"""
     client = FakeS3Client(PLANNING_APPLICATION_FILES + OTHER_FILES)
 
-    keys = list_files(client, BUCKET, dataset_file_prefixes("planning-application", "planning-application"))
+    keys = list_files(
+        client,
+        BUCKET,
+        dataset_file_prefixes("planning-application", "planning-application"),
+    )
 
     assert sorted(keys) == sorted(PLANNING_APPLICATION_FILES)
 
@@ -108,6 +118,7 @@ def test_list_files_returns_nothing_when_no_files_match():
 
 # Test remove_files
 
+
 def test_remove_files_deletes_in_batches_s3_accepts():
     """Should split the keys into requests of at most DELETE_BATCH_SIZE"""
     keys = [f"dataset/tree.part-{i:05}.csv" for i in range(2 * DELETE_BATCH_SIZE + 500)]
@@ -115,7 +126,11 @@ def test_remove_files_deletes_in_batches_s3_accepts():
 
     remove_files(client, BUCKET, keys)
 
-    assert [len(call["Objects"]) for call in client.delete_calls] == [DELETE_BATCH_SIZE, DELETE_BATCH_SIZE, 500]
+    assert [len(call["Objects"]) for call in client.delete_calls] == [
+        DELETE_BATCH_SIZE,
+        DELETE_BATCH_SIZE,
+        500,
+    ]
     assert client.keys == set()
 
 
@@ -123,7 +138,13 @@ def test_remove_files_raises_when_s3_reports_errors():
     """Should fail rather than carry on when S3 could not delete some keys"""
     client = FakeS3Client(
         PLANNING_APPLICATION_FILES,
-        errors=[{"Key": "dataset/planning-application.csv", "Code": "AccessDenied", "Message": "Access Denied"}],
+        errors=[
+            {
+                "Key": "dataset/planning-application.csv",
+                "Code": "AccessDenied",
+                "Message": "Access Denied",
+            }
+        ],
     )
 
     with pytest.raises(RuntimeError, match="failed to delete 1 file"):
@@ -141,6 +162,7 @@ def test_remove_files_does_nothing_for_no_keys():
 
 # Test is_dry_run
 
+
 @pytest.mark.parametrize("value", [None, "", "true", "True", "yes", "flase", "0"])
 def test_is_dry_run_for_anything_but_false(value):
     """Should only list when DRY_RUN is missing, empty or anything other than false"""
@@ -155,12 +177,15 @@ def test_is_dry_run_is_off_only_for_false(value):
 
 # Test retire_dataset_files
 
+
 def test_retire_dataset_files_dry_run_lists_without_deleting(caplog):
     """Should log what it would remove and leave every file in place"""
     client = FakeS3Client(PLANNING_APPLICATION_FILES + OTHER_FILES)
 
     with caplog.at_level(logging.INFO):
-        keys = retire_dataset_files(client, BUCKET, "planning-application", "planning-application", dry_run=True)
+        keys = retire_dataset_files(
+            client, BUCKET, "planning-application", "planning-application", dry_run=True
+        )
 
     assert sorted(keys) == sorted(PLANNING_APPLICATION_FILES)
     assert client.delete_calls == []
@@ -181,7 +206,9 @@ def test_retire_dataset_files_removes_only_the_dataset_files():
     """Should delete the dataset's files and leave its neighbours alone"""
     client = FakeS3Client(PLANNING_APPLICATION_FILES + OTHER_FILES)
 
-    keys = retire_dataset_files(client, BUCKET, "planning-application", "planning-application", dry_run=False)
+    keys = retire_dataset_files(
+        client, BUCKET, "planning-application", "planning-application", dry_run=False
+    )
 
     assert sorted(keys) == sorted(PLANNING_APPLICATION_FILES)
     assert client.keys == set(OTHER_FILES)
@@ -192,7 +219,13 @@ def test_retire_dataset_files_does_nothing_when_no_files_are_found(caplog):
     client = FakeS3Client(OTHER_FILES)
 
     with caplog.at_level(logging.INFO):
-        keys = retire_dataset_files(client, BUCKET, "planning-application", "planning-application", dry_run=False)
+        keys = retire_dataset_files(
+            client,
+            BUCKET,
+            "planning-application",
+            "planning-application",
+            dry_run=False,
+        )
 
     assert keys == []
     assert client.delete_calls == []

@@ -27,8 +27,7 @@ def build_redirect_map(old_resource_entries: List[Dict]) -> Dict[str, str]:
 
 
 def build_dataset_resource_pairs(
-    dataset_resource_map: Dict[str, List[str]],
-    dataset: Optional[str] = None
+    dataset_resource_map: Dict[str, List[str]], dataset: Optional[str] = None
 ) -> List[Tuple[str, str]]:
     """Build sorted list of (dataset, resource) pairs.
 
@@ -57,7 +56,7 @@ def apply_offset_and_limit(
     dataset_resource_pairs: List[Tuple[str, str]],
     offset: Optional[int] = None,
     limit: Optional[int] = None,
-    dataset: Optional[str] = None
+    dataset: Optional[str] = None,
 ) -> List[Tuple[str, str]]:
     """Apply offset and limit to dataset-resource pairs with validation.
 
@@ -110,7 +109,9 @@ def load_state_resources(state_path: str, dataset: str) -> List[Tuple[str, str]]
     transform_resources = state["transform_resources"]
 
     if dataset not in transform_resources:
-        raise KeyError(f"Dataset '{dataset}' not found in state.json transform_resources")
+        raise KeyError(
+            f"Dataset '{dataset}' not found in state.json transform_resources"
+        )
 
     return [(dataset, resource) for resource in transform_resources[dataset]]
 
@@ -166,10 +167,15 @@ def select_resources_to_process(
         specification_hash = hash_directory(specification_dir)
         before_skip = len(pairs)
         pairs = [
-            (ds, resource) for ds, resource in pairs
+            (ds, resource)
+            for ds, resource in pairs
             if resource_needs_processing(
-                dataset_resource_dir, ds, resource,
-                dl_version, config_hash, specification_hash,
+                dataset_resource_dir,
+                ds,
+                resource,
+                dl_version,
+                config_hash,
+                specification_hash,
             )
         ]
         skipped = before_skip - len(pairs)
