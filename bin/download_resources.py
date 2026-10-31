@@ -13,7 +13,22 @@ from collection_task.filtering import (
 logger = logging.getLogger(__name__)
 
 
-def download_resources(collection, collection_dir: str, bucket=None, base_url=None, collection_name=None, dataset=None, transformaiton_offset=None, transformation_limit=None, dataset_resource_dir="var/dataset-resource/", pipeline_dir="pipeline/", specification_dir="specification/", reprocess=False, max_threads=4, state_path=None) -> None:
+def download_resources(
+    collection,
+    collection_dir: str,
+    bucket=None,
+    base_url=None,
+    collection_name=None,
+    dataset=None,
+    transformaiton_offset=None,
+    transformation_limit=None,
+    dataset_resource_dir="var/dataset-resource/",
+    pipeline_dir="pipeline/",
+    specification_dir="specification/",
+    reprocess=False,
+    max_threads=4,
+    state_path=None,
+) -> None:
     """Download resources for a collection.
 
     Uses the same selection logic as transform_resources (via select_resources_to_process)
@@ -36,7 +51,9 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     """
     # Validate that either bucket or base_url is provided
     if not bucket and not base_url:
-        error_msg = "Either --bucket or --base-url must be provided to download resources"
+        error_msg = (
+            "Either --bucket or --base-url must be provided to download resources"
+        )
         logger.error(error_msg)
         raise ValueError(error_msg)
 
@@ -45,7 +62,11 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
 
     # Get collection name from collection object or parameter
     if not collection_name:
-        collection_name = collection.name if hasattr(collection, 'name') and collection.name else "unknown"
+        collection_name = (
+            collection.name
+            if hasattr(collection, "name") and collection.name
+            else "unknown"
+        )
 
     dataset_resource_map = collection.dataset_resource_map()
 
@@ -65,7 +86,9 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     # Extract unique resources to download (a resource only needs to be downloaded once)
     resources_to_download = list(set([res for _, res in dataset_resource_pairs]))
 
-    logger.info(f"Downloading resources for {len(dataset_resource_pairs)} transformation tasks")
+    logger.info(
+        f"Downloading resources for {len(dataset_resource_pairs)} transformation tasks"
+    )
 
     # Build download map with URLs and output paths
     download_map = {}
@@ -88,7 +111,7 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
         elif base_url:
             # HTTP(S) base URL - construct full path
             # Ensure base_url ends with /
-            base = base_url.rstrip('/') + '/'
+            base = base_url.rstrip("/") + "/"
             url = f"{base}{collection_name}-collection/collection/resource/{resource}"
         else:
             # This shouldn't happen due to validation above, but keep as fallback
@@ -106,102 +129,104 @@ def download_resources(collection, collection_dir: str, bucket=None, base_url=No
     "--collection-dir",
     required=True,
     type=click.Path(exists=True),
-    help="Path to the collection directory"
+    help="Path to the collection directory",
 )
 @click.option(
     "--bucket",
     default=None,
-    help="S3 bucket name to download from (constructs s3:// URLs)"
+    help="S3 bucket name to download from (constructs s3:// URLs)",
 )
 @click.option(
     "--base-url",
     default=None,
-    help="Base URL for HTTP(S) downloads (e.g., https://files.planning.data.gov.uk/)"
+    help="Base URL for HTTP(S) downloads (e.g., https://files.planning.data.gov.uk/)",
 )
 @click.option(
     "--collection-name",
     default=None,
-    help="Collection name (e.g., 'brownfield-land'). If not provided, will be inferred from COLLECTION_NAME env var."
+    help="Collection name (e.g., 'brownfield-land'). If not provided, will be inferred from COLLECTION_NAME env var.",
 )
-@click.option(
-    "--dataset",
-    default=None,
-    help="Filter resources to only this dataset"
-)
-@click.option(
-    "--offset",
-    default=None,
-    type=int,
-    help="Offset for filtering resources"
-)
-@click.option(
-    "--limit",
-    default=None,
-    type=int,
-    help="Limit for filtering resources"
-)
+@click.option("--dataset", default=None, help="Filter resources to only this dataset")
+@click.option("--offset", default=None, type=int, help="Offset for filtering resources")
+@click.option("--limit", default=None, type=int, help="Limit for filtering resources")
 @click.option(
     "--dataset-resource-dir",
     default="var/dataset-resource/",
-    help="Path to dataset resource logs (used to skip already up-to-date resources)"
+    help="Path to dataset resource logs (used to skip already up-to-date resources)",
 )
 @click.option(
     "--pipeline-dir",
     default="pipeline/",
-    help="Path to the pipeline configuration directory (used for config hash)"
+    help="Path to the pipeline configuration directory (used for config hash)",
 )
 @click.option(
     "--specification-dir",
     default="specification/",
-    help="Path to the specification directory (used for specification hash)"
+    help="Path to the specification directory (used for specification hash)",
 )
 @click.option(
     "--state-path",
     default=None,
     type=click.Path(exists=True),
-    help="Path to state.json for stable ordered resource list"
+    help="Path to state.json for stable ordered resource list",
 )
 @click.option(
     "--reprocess",
     is_flag=True,
     default=False,
-    help="Download all resources, ignoring the dataset-resource skip check"
+    help="Download all resources, ignoring the dataset-resource skip check",
 )
 @click.option(
     "--max-threads",
     default=4,
     type=int,
-    help="Maximum number of concurrent download threads"
+    help="Maximum number of concurrent download threads",
 )
 @click.option(
     "--quiet",
     is_flag=True,
-    help="Suppress progress output (only show warnings and errors)"
+    help="Suppress progress output (only show warnings and errors)",
 )
-@click.option(
-    "--debug",
-    is_flag=True,
-    help="Enable debug logging"
-)
-def run_command(collection_dir, bucket, base_url, collection_name, dataset, offset, limit, dataset_resource_dir, pipeline_dir, specification_dir, state_path, reprocess, max_threads, quiet, debug):
+@click.option("--debug", is_flag=True, help="Enable debug logging")
+def run_command(
+    collection_dir,
+    bucket,
+    base_url,
+    collection_name,
+    dataset,
+    offset,
+    limit,
+    dataset_resource_dir,
+    pipeline_dir,
+    specification_dir,
+    state_path,
+    reprocess,
+    max_threads,
+    quiet,
+    debug,
+):
     """Download resources for a collection from S3 or HTTP(S) URLs.
 
     Either --bucket or --base-url must be provided.
     """
     # Configure logging
     if debug:
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+        logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
     elif quiet:
-        logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
+        logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
     else:
-        logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     # Get collection name from parameter or environment variable
     import os
+
     if not collection_name:
-        collection_name = os.environ.get('COLLECTION_NAME')
+        collection_name = os.environ.get("COLLECTION_NAME")
         if not collection_name:
-            click.echo("Error: --collection-name must be provided or COLLECTION_NAME environment variable must be set", err=True)
+            click.echo(
+                "Error: --collection-name must be provided or COLLECTION_NAME environment variable must be set",
+                err=True,
+            )
             sys.exit(1)
 
     # Validate that either bucket or base_url is provided

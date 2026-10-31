@@ -35,7 +35,11 @@ class FakeS3Client:
         return self
 
     def paginate(self, Bucket, Prefix):
-        yield {"Contents": [{"Key": key} for key in sorted(self.keys) if key.startswith(Prefix)]}
+        yield {
+            "Contents": [
+                {"Key": key} for key in sorted(self.keys) if key.startswith(Prefix)
+            ]
+        }
 
     def delete_objects(self, Bucket, Delete):
         self.delete_calls.append(Delete)
@@ -54,7 +58,15 @@ def client(mocker):
 def _run(*extra_args):
     return CliRunner().invoke(
         retire_dataset_files.main,
-        ["--bucket", BUCKET, "--dataset", "planning-application", "--collection", "planning-application", *extra_args],
+        [
+            "--bucket",
+            BUCKET,
+            "--dataset",
+            "planning-application",
+            "--collection",
+            "planning-application",
+            *extra_args,
+        ],
     )
 
 
@@ -75,7 +87,9 @@ def test_command_removes_the_dataset_files_when_dry_run_is_false(client):
     assert client.keys == set(OTHER_FILES)
 
 
-@pytest.mark.parametrize("missing", ["COLLECTION_NAME", "DATASET_NAME", "COLLECTION_DATASET_BUCKET_NAME"])
+@pytest.mark.parametrize(
+    "missing", ["COLLECTION_NAME", "DATASET_NAME", "COLLECTION_DATASET_BUCKET_NAME"]
+)
 def test_retire_sh_fails_without_each_required_variable(missing):
     """Should exit with an error before doing anything if a required variable is missing"""
     env = {
@@ -86,7 +100,9 @@ def test_retire_sh_fails_without_each_required_variable(missing):
     }
     del env[missing]
 
-    result = subprocess.run(["bash", str(RETIRE_SH)], env=env, capture_output=True, text=True)
+    result = subprocess.run(
+        ["bash", str(RETIRE_SH)], env=env, capture_output=True, text=True
+    )
 
     assert result.returncode == 1
     assert f"Error: {missing} environment variable must be set" in result.stdout

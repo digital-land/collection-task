@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 try:
     import boto3
+
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
@@ -36,7 +37,7 @@ def download_file(url, output_path, raise_error=False, max_retries=5):
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Check if this is an s3:// URL
-    if url.startswith('s3://'):
+    if url.startswith("s3://"):
         if not HAS_BOTO3:
             error_msg = "boto3 is required to download from s3:// URLs. Install it with: pip install boto3"
             logger.error(error_msg)
@@ -46,12 +47,12 @@ def download_file(url, output_path, raise_error=False, max_retries=5):
 
         parsed = urlparse(url)
         bucket = parsed.netloc
-        key = parsed.path.lstrip('/')
+        key = parsed.path.lstrip("/")
 
         retries = 0
         while retries < max_retries:
             try:
-                s3 = boto3.client('s3')
+                s3 = boto3.client("s3")
                 s3.download_file(bucket, key, str(output_path))
                 return True
             except Exception as e:
@@ -124,7 +125,9 @@ def download_files(url_map, max_threads=4):
                 if not use_progress_bar:
                     current_percent = (i * 100) // total_files
                     if current_percent >= last_logged_percent + 10 or i == total_files:
-                        logger.info(f"Progress: {i}/{total_files} files ({current_percent}%)")
+                        logger.info(
+                            f"Progress: {i}/{total_files} files ({current_percent}%)"
+                        )
                         last_logged_percent = current_percent
             except Exception as e:
                 error_msg = f"Failed to download {url}: {e}"
@@ -136,7 +139,10 @@ def download_files(url_map, max_threads=4):
 
         # Raise an error if any downloads failed
         if failed_downloads:
-            error_summary = f"Failed to download {len(failed_downloads)} file(s):\n" + "\n".join(failed_downloads)
+            error_summary = (
+                f"Failed to download {len(failed_downloads)} file(s):\n"
+                + "\n".join(failed_downloads)
+            )
             logger.error(error_summary)
             raise RuntimeError(error_summary)
 

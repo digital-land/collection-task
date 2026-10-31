@@ -10,8 +10,9 @@ pytest-mock>=3.12.0
 pyarrow>=14.0.0
 
 # Code formatting and linting
-black>=24.0.0
-flake8>=7.0.0
+black==24.8.0
+flake8==7.1.2
+pre-commit
 
 # Optional: Additional development tools
 # ipython>=8.0.0  # Better REPL

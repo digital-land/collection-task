@@ -33,7 +33,15 @@ def process_single_resource(args):
     Raises:
         FileNotFoundError: If the resource file does not exist at resource_path
     """
-    old_resource, dataset, resource_path, endpoints, organisations, entry_date, config = args
+    (
+        old_resource,
+        dataset,
+        resource_path,
+        endpoints,
+        organisations,
+        entry_date,
+        config,
+    ) = args
 
     if not Path(resource_path).exists():
         raise FileNotFoundError(
@@ -42,25 +50,30 @@ def process_single_resource(args):
 
     try:
         # Build output directories
-        transformed_dir = Path(config['transformed_dir']) / dataset
-        issue_dir = Path(config['issue_dir']) / dataset
-        output_log_dir = Path(config['output_log_dir'])
-        column_field_dir = Path(config['column_field_dir']) / dataset
-        dataset_resource_dir = Path(config['dataset_resource_dir']) / dataset
-        converted_resource_dir = Path(config['converted_resource_dir']) / dataset
+        transformed_dir = Path(config["transformed_dir"]) / dataset
+        issue_dir = Path(config["issue_dir"]) / dataset
+        output_log_dir = Path(config["output_log_dir"])
+        column_field_dir = Path(config["column_field_dir"]) / dataset
+        dataset_resource_dir = Path(config["dataset_resource_dir"]) / dataset
+        converted_resource_dir = Path(config["converted_resource_dir"]) / dataset
 
         # Create directories
-        for directory in [transformed_dir, issue_dir, output_log_dir,
-                          column_field_dir, dataset_resource_dir,
-                          converted_resource_dir]:
+        for directory in [
+            transformed_dir,
+            issue_dir,
+            output_log_dir,
+            column_field_dir,
+            dataset_resource_dir,
+            converted_resource_dir,
+        ]:
             directory.mkdir(parents=True, exist_ok=True)
 
         # Build output path using old_resource (original resource identifier)
         output_path = transformed_dir / f"{old_resource}.csv"
 
         # Initialize pipeline and specification objects
-        pipeline = Pipeline(path=config['pipeline_dir'], dataset=dataset)
-        specification = Specification(config.get('specification_dir', 'specification/'))
+        pipeline = Pipeline(path=config["pipeline_dir"], dataset=dataset)
+        specification = Specification(config.get("specification_dir", "specification/"))
 
         # Parse endpoints and organisations (convert space-separated strings to lists)
         endpoints_list = endpoints.split() if endpoints else []
@@ -72,18 +85,18 @@ def process_single_resource(args):
             specification=specification,
             input_path=str(resource_path),
             output_path=output_path,
-            collection_dir=config.get('collection_dir', 'collection/'),
+            collection_dir=config.get("collection_dir", "collection/"),
             issue_dir=str(issue_dir),
             column_field_dir=str(column_field_dir),
             dataset_resource_dir=str(dataset_resource_dir),
             converted_resource_dir=str(converted_resource_dir),
-            organisation_path=config['organisation_path'],
-            config_path=config['config_path'],
+            organisation_path=config["organisation_path"],
+            config_path=config["config_path"],
             endpoints=endpoints_list,
             organisations=organisations_list,
             entry_date=entry_date,
-            cache_dir=config.get('cache_dir', 'var/cache'),
-            resource=config.get('resource'),  # For redirected resources
+            cache_dir=config.get("cache_dir", "var/cache"),
+            resource=config.get("resource"),  # For redirected resources
             output_log_dir=str(output_log_dir),
         )
 
@@ -91,7 +104,9 @@ def process_single_resource(args):
 
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"Error processing {old_resource} for dataset {dataset}: {error_msg}")
+        logger.error(
+            f"Error processing {old_resource} for dataset {dataset}: {error_msg}"
+        )
         return (old_resource, False, error_msg)
 
 
@@ -163,25 +178,37 @@ def process_resources(
         entry_date = collection.resource_start_date(old_resource)
 
         config = {
-            'pipeline_dir': pipeline_dir,
-            'cache_dir': cache_dir,
-            'collection_dir': collection_dir,
-            'transformed_dir': transformed_dir,
-            'issue_dir': issue_dir,
-            'output_log_dir': output_log_dir,
-            'column_field_dir': column_field_dir,
-            'dataset_resource_dir': dataset_resource_dir,
-            'converted_resource_dir': converted_resource_dir,
-            'config_path': f"{cache_dir}config.sqlite3",
-            'organisation_path': f"{cache_dir}organisation.csv",
+            "pipeline_dir": pipeline_dir,
+            "cache_dir": cache_dir,
+            "collection_dir": collection_dir,
+            "transformed_dir": transformed_dir,
+            "issue_dir": issue_dir,
+            "output_log_dir": output_log_dir,
+            "column_field_dir": column_field_dir,
+            "dataset_resource_dir": dataset_resource_dir,
+            "converted_resource_dir": converted_resource_dir,
+            "config_path": f"{cache_dir}config.sqlite3",
+            "organisation_path": f"{cache_dir}organisation.csv",
         }
 
         if resource != old_resource:
-            config['resource'] = old_resource
+            config["resource"] = old_resource
 
-        tasks.append((old_resource, ds, resource_path, endpoints, organisations, entry_date, config))
+        tasks.append(
+            (
+                old_resource,
+                ds,
+                resource_path,
+                endpoints,
+                organisations,
+                entry_date,
+                config,
+            )
+        )
 
-    logger.info(f"Processing {len(tasks)} transformation tasks (out of {total_pairs} total)")
+    logger.info(
+        f"Processing {len(tasks)} transformation tasks (out of {total_pairs} total)"
+    )
 
     if not tasks:
         logger.warning("No transformation tasks to process after applying filters")
@@ -199,17 +226,18 @@ def process_resources(
 
     with Pool(processes=max_workers) as pool:
         if use_progress_bar:
-            results = list(tqdm(
-                pool.imap(process_single_resource, tasks),
-                total=len(tasks),
-                desc="Processing resources"
-            ))
+            results = list(
+                tqdm(
+                    pool.imap(process_single_resource, tasks),
+                    total=len(tasks),
+                    desc="Processing resources",
+                )
+            )
         else:
             results = []
             total_tasks = len(tasks)
             logger.info(f"Starting processing of {total_tasks} transformation tasks...")
 
-            progress_interval = max(1, total_tasks // 10)
             last_logged_percent = 0
 
             for i, result in enumerate(pool.imap(process_single_resource, tasks), 1):
@@ -217,7 +245,9 @@ def process_resources(
 
                 current_percent = (i * 100) // total_tasks
                 if current_percent >= last_logged_percent + 10 or i == total_tasks:
-                    logger.info(f"Progress: {i}/{total_tasks} tasks ({current_percent}%)")
+                    logger.info(
+                        f"Progress: {i}/{total_tasks} tasks ({current_percent}%)"
+                    )
                     last_logged_percent = current_percent
 
             logger.info(f"Completed processing of {total_tasks} transformation tasks")

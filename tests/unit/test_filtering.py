@@ -11,6 +11,7 @@ from collection_task.filtering import (
 
 # Test build_redirect_map
 
+
 def test_build_redirect_map_creates_mapping():
     """Should create a dictionary mapping old-resource to resource"""
     old_resource_entries = [
@@ -33,6 +34,7 @@ def test_build_redirect_map_handles_empty_list():
 
 
 # Test build_dataset_resource_pairs
+
 
 def test_build_dataset_resource_pairs_returns_sorted_pairs():
     """Should return sorted (dataset, resource) tuples"""
@@ -68,7 +70,9 @@ def test_build_dataset_resource_pairs_handles_missing_dataset():
         "dataset-a": ["resource-1"],
     }
 
-    result = build_dataset_resource_pairs(dataset_resource_map, dataset="dataset-missing")
+    result = build_dataset_resource_pairs(
+        dataset_resource_map, dataset="dataset-missing"
+    )
 
     assert result == []
 
@@ -89,6 +93,7 @@ def test_build_dataset_resource_pairs_preserves_duplicates():
 
 
 # Test apply_offset_and_limit
+
 
 def test_apply_offset_and_limit_applies_offset():
     """Should skip first N pairs when offset specified"""
@@ -146,6 +151,7 @@ def test_apply_offset_and_limit_handles_no_offset_or_limit():
 
 
 # Test build_retired_resources_set
+
 
 def test_build_retired_resources_set_filters_status_410():
     """Should return set of resources with status 410"""
