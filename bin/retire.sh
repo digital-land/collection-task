@@ -17,7 +17,7 @@ if [ -z "$DATASET_NAME" ]; then
     exit 1
 fi
 
-# Unlike assemble.sh there is no CDN fallback: files can only be removed from the bucket itself
+# There is no CDN fallback: files can only be removed from the bucket itself
 if [ -z "$COLLECTION_DATASET_BUCKET_NAME" ]; then
     echo "Error: COLLECTION_DATASET_BUCKET_NAME environment variable must be set"
     exit 1
