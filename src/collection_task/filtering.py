@@ -185,19 +185,3 @@ def select_resources_to_process(
         )
 
     return pairs
-
-
-def build_retired_resources_set(old_resource_entries: List[Dict]) -> set:
-    """Build a set of retired resources (status 410).
-
-    Args:
-        old_resource_entries: List of old_resource entries from collection
-
-    Returns:
-        Set of retired resource IDs
-    """
-    retired_resources = set()
-    for entry in old_resource_entries:
-        if entry.get("status") == "410":
-            retired_resources.add(entry["old-resource"])
-    return retired_resources

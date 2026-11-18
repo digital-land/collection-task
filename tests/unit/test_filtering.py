@@ -5,7 +5,6 @@ from collection_task.filtering import (
     build_redirect_map,
     build_dataset_resource_pairs,
     apply_offset_and_limit,
-    build_retired_resources_set,
 )
 
 
@@ -148,37 +147,3 @@ def test_apply_offset_and_limit_handles_no_offset_or_limit():
     result = apply_offset_and_limit(pairs)
 
     assert result == pairs
-
-
-# Test build_retired_resources_set
-
-
-def test_build_retired_resources_set_filters_status_410():
-    """Should return set of resources with status 410"""
-    old_resource_entries = [
-        {"old-resource": "abc123", "status": "410"},
-        {"old-resource": "def456", "status": "200"},
-        {"old-resource": "ghi789", "status": "410"},
-    ]
-
-    result = build_retired_resources_set(old_resource_entries)
-
-    assert result == {"abc123", "ghi789"}
-
-
-def test_build_retired_resources_set_handles_missing_status():
-    """Should handle entries without status field"""
-    old_resource_entries = [
-        {"old-resource": "abc123"},
-        {"old-resource": "def456", "status": "410"},
-    ]
-
-    result = build_retired_resources_set(old_resource_entries)
-
-    assert result == {"def456"}
-
-
-def test_build_retired_resources_set_handles_empty_list():
-    """Should return empty set for empty input"""
-    result = build_retired_resources_set([])
-    assert result == set()
