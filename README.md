@@ -41,6 +41,10 @@ make dev
 You can now run the whole pipeline with the following: 
 ```
 Specify the branch to run against via DIGITAL_LAND_PYTHON_REF e.g. the below
+
+DIGITAL_LAND_PYTHON_REF: selects the branch of digital-land-python to install. Defaults to the version specified in requirements.txt when unset or main.
+
+MAKERULES_URL: selects the makerules source URL. Airflow can set this to use a particular makerules branch. If unset, makerules uses its default main branch.
 ```
 
 ```
