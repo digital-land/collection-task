@@ -40,7 +40,11 @@ make dev
 
 You can now run the whole pipeline with the following: 
 ```
-make run COLLECTION_NAME=<insert_collection_name_here> TRANSFORMED_JOBS=8
+Specify the branch to run against via DIGITAL_LAND_PYTHON_REF e.g. the below
+```
+
+```
+make run COLLECTION_NAME=<insert_collection_name_here> DIGITAL_LAND_PYTHON_REF=<a branch> TRANSFORMED_JOBS=8
 ```
 
 :memo: **Note:** TRANSFORMED_JOBS=8 is an optional extra to speed up the transform step on large datasets. This uses bin/run.sh which exists only for running collect-task locally.
