@@ -40,10 +40,16 @@ make dev
 
 You can now run the whole pipeline with the following: 
 ```
-make run COLLECTION_NAME=<insert_collection_name_here> TRANSFORMED_JOBS=8
+make run COLLECTION_NAME=<insert_collection_name_here> DIGITAL_LAND_PYTHON_REF=<a branch> TRANSFORMED_JOBS=8
 ```
 
-:memo: **Note:** TRANSFORMED_JOBS=8 is an optional extra to speed up the transform step on large datasets. This uses bin/run.sh which exists only for running collect-task locally.
+:memo: **Note:** 
+
+DIGITAL_LAND_PYTHON_REF: selects the branch of digital-land-python to install. Defaults to the version specified in requirements.txt when unset or main.
+
+MAKERULES_URL: selects the makerules source URL. Airflow can set this to use a particular makerules branch. If unset, makerules uses its default main branch.
+
+TRANSFORMED_JOBS=8 is an optional extra to speed up the transform step on large datasets. This uses bin/run.sh which exists only for running collect-task locally.
 
 Alternatively you can run each of the four sections of a collect-task separately:
 
