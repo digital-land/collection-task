@@ -37,6 +37,13 @@ include makerules/development.mk
 include makerules/collection.mk
 include makerules/pipeline.mk
 
+# Testing a digital-land-python branch in dev or staging: Airflow sets DIGITAL_LAND_PYTHON_REF
+# for one run. Unset or "main" keeps the version from requirements.txt.
+init::
+ifneq ($(filter-out main,$(DIGITAL_LAND_PYTHON_REF)),)
+	pip3 install --upgrade "git+https://github.com/digital-land/digital-land-python.git@$(DIGITAL_LAND_PYTHON_REF)#egg=digital-land"
+endif
+
 run::
 	COLLECTION_NAME=$(COLLECTION_NAME) TRANSFORMED_JOBS=$(TRANSFORMED_JOBS) ./bin/run.sh
 
